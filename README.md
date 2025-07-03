@@ -2,6 +2,8 @@
 
 # AppIntBlockerGUI v1.0
 
+![AppIntBlockerGUI Showcase](src/images/mainView.png)
+
 **Professional Windows Application Firewall Manager with Modern UI**
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
@@ -23,13 +25,6 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 - **Windows Firewall Integration**: Direct integration with Windows Firewall API
 - **Real-time Monitoring**: Live status updates and rule validation
 - **Administrator Privilege Management**: Automatic privilege checking and elevation
-
-### Modern UI/UX
-- **Dark/Light Theme**: Dynamic theme switching with Nuln Oil Gloss design
-- **Responsive Design**: Adaptive layout for different screen sizes
-- **Material Design Elements**: Modern icons and smooth animations
-- **Professional Navigation**: Sidebar navigation with contextual menus
-- **Status Dashboard**: Real-time system status and uptime tracking
 
 ### Technical Excellence
 - **MVVM Architecture**: Clean separation of concerns
@@ -130,21 +125,6 @@ dotnet run
 - **UI Responsiveness**: Non-blocking operations with progress indicators
 - **Rule Processing**: Efficient handling of Windows Firewall rules
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow MVVM patterns
-- Use async/await for I/O operations
-- Add unit tests for new features
-- Update documentation
-- Follow C# coding conventions
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -154,21 +134,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Windows Firewall API Documentation](https://docs.microsoft.com/en-us/windows/win32/api/netfw/)
 - [MahApps.Metro](https://mahapps.com/)
 - [ScottPlot](https://scottplot.net/)
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/bugragungoz/AppIntBlockerGUI/issues)
-- **Documentation**: [Wiki](https://github.com/bugragungoz/AppIntBlockerGUI/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/bugragungoz/AppIntBlockerGUI/discussions)
-
-## Roadmap
-
-- [ ] Rule import/export functionality
-- [ ] PowerShell module integration
-- [ ] Group Policy support
-- [ ] Network monitoring dashboard
-- [ ] Scheduled rule management
-- [ ] Advanced filtering options
 
 ## AI Development Attribution
 
