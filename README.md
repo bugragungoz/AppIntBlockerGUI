@@ -1,3 +1,5 @@
+⚠️ **Disclaimer:** This project is currently under active development and in a pre-release state. Features may be unstable or subject to change. Please use with caution.
+
 # AppIntBlockerGUI v1.0
 
 **Professional Windows Application Firewall Manager with Modern UI**
