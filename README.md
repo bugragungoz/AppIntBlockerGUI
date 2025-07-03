@@ -2,7 +2,19 @@
 
 # AppIntBlockerGUI v1.0
 
-![AppIntBlockerGUI Showcase](src/images/mainView.png)
+![Block Application View](src/images/blockApplication.png)
+
+### Additional Views
+
+| Manage Rules | Restore Points | Windows Firewall | Settings |
+| :---: | :---: | :---: | :---: |
+| ![Manage Rules View](src/images/manageRules.png) | ![Restore Points View](src/images/restorePoints.png) | ![Windows Firewall View](src/images/windowsFirewall.png) | ![Settings View](src/images/settings1.png) |
+
+| Loading & Dialogs |
+| :---: |
+| ![Loading Screen](src/images/loadingScreen.png) |
+| ![Admin Privileges](src/images/adminPrivileges.png) |
+
 
 **Professional Windows Application Firewall Manager with Modern UI**
 
