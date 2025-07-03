@@ -56,22 +56,25 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 
 ### Installation
 
-**1. Clone the Repository**
+**1. Open a Terminal**
+Open your terminal or command prompt (e.g., PowerShell, Windows Terminal, or CMD).
+
+**2. Clone the Repository**
 ```bash
 git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
 ```
 
-**2. Navigate to the Source Directory**
+**3. Navigate to the Source Directory**
 ```bash
 cd AppIntBlockerGUI/src
 ```
 
-**3. Build the Application**
+**4. Build the Application**
 ```bash
 dotnet build
 ```
 
-**4. Run the Application**
+**5. Run the Application**
 ```bash
 dotnet run
 ```
