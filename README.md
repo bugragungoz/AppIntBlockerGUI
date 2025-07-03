@@ -57,9 +57,9 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 ### Installation
 
 **1. Open a Terminal**
-```
-Open your terminal or command prompt (e.g., PowerShell, Windows Terminal, or CMD).
-```
+
+*Open your terminal or command prompt (e.g., PowerShell, Windows Terminal, or CMD).*
+
 
 **2. Clone the Repository**
 ```bash
