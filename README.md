@@ -6,14 +6,15 @@
 
 ### Additional Views
 
-| Manage Rules | Restore Points | Windows Firewall | Settings |
-| :---: | :---: | :---: | :---: |
-| ![Manage Rules View](src/images/manageRules.png) | ![Restore Points View](src/images/restorePoints.png) | ![Windows Firewall View](src/images/windowsFirewall.png) | ![Settings View](src/images/settings1.png) |
+| Manage Rules | Restore Points | Windows Firewall | Settings (General) | Settings (Theme) |
+| :---: | :---: | :---: | :---: | :---: |
+| ![Manage Rules View](src/images/manageRules.png) | ![Restore Points View](src/images/restorePoints.png) | ![Windows Firewall View](src/images/windowsFirewall.png) | ![Settings View 1](src/images/settings1.png) | ![Settings View 2](src/images/settings2.png) |
 
-| Loading & Dialogs |
-| :---: |
-| ![Loading Screen](src/images/loadingScreen.png) |
-| ![Admin Privileges](src/images/adminPrivileges.png) |
+### Loading & Dialogs
+
+| Loading Screen | Admin Privileges | Permission Denied | Operation Cancelled |
+| :---: | :---: | :---: | :---: |
+| ![Loading Screen](src/images/loadingScreen.png) | ![Admin Privileges](src/images/adminPrivileges.png) | ![Permission Denied](src/images/permissionDenied.png) | ![Operation Cancelled](src/images/operationCancelled.png) |
 
 
 **Professional Windows Application Firewall Manager with Modern UI**
