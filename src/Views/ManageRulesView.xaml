@@ -1,0 +1,230 @@
+<UserControl x:Class="AppIntBlockerGUI.Views.ManageRulesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:AppIntBlockerGUI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        
+        <!-- Simple styles with hardcoded colors -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#f5f0eb"/>
+        </Style>
+        
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Section Header Style -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#eebb88"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header Section -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Manage Rules" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       Foreground="#eebb88" 
+                       Margin="0,0,0,10"/>
+            <TextBlock Text="View and manage AppIntBlocker firewall rules" 
+                       Foreground="#f5f0eb"/>
+        </StackPanel>
+
+        <!-- Search and Controls Section -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Search Bar -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                <TextBlock Text="Search and Filter" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBox Text="{Binding SearchFilter, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="Search and filter rules..."
+                         Style="{StaticResource PlaceholderTextBoxStyle}"
+                         FontSize="14"
+                         MinHeight="40"
+                         Margin="0,0,0,10"/>
+            </StackPanel>
+            
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="🔄 Refresh Rules"
+                        Command="{Binding RefreshRulesCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        MinWidth="140"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="📤 Export List"
+                        Command="{Binding ExportRulesCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        MinWidth="120"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="📥 Import"
+                        Command="{Binding ImportRulesCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        MinWidth="100"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="🗑️ Remove Selected"
+                        Command="{Binding RemoveSelectedRuleCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        Background="#e74a35"
+                        MinWidth="140"/>
+            </StackPanel>
+        </Grid>
+        
+        <!-- Rules List Section -->
+        <Border Grid.Row="2" 
+                Background="#2a2623" 
+                BorderBrush="#3c3835"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" 
+                           Text="Firewall Rules" 
+                           Style="{StaticResource SectionHeaderStyle}"/>
+                
+                <ListView Grid.Row="1"
+                          ItemsSource="{Binding FilteredFirewallRules}" 
+                          SelectedItem="{Binding SelectedRule}"
+                          Background="#171310" 
+                          BorderBrush="#3c3835" 
+                          BorderThickness="1"
+                          Foreground="#f5f0eb">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Rule Name" DisplayMemberBinding="{Binding RuleName}" Width="250"/>
+                            <GridViewColumn Header="Direction" DisplayMemberBinding="{Binding Direction}" Width="100"/>
+                            <GridViewColumn Header="Action" DisplayMemberBinding="{Binding Action}" Width="100"/>
+                            <GridViewColumn Header="Protocol" DisplayMemberBinding="{Binding Protocol}" Width="100"/>
+                            <GridViewColumn Header="Local Port" DisplayMemberBinding="{Binding LocalPort}" Width="100"/>
+                            <GridViewColumn Header="Remote Port" DisplayMemberBinding="{Binding RemotePort}" Width="100"/>
+                            <GridViewColumn Header="Enabled" Width="80">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding Enabled}" 
+                                                  IsEnabled="False"
+                                                  HorizontalAlignment="Center"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
+        </Border>
+
+        <!-- Operation Log Section -->
+        <Border Grid.Row="3" 
+                Background="#0a0a0a" 
+                BorderBrush="#eebb88"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="15"
+                Margin="0,20,0,0"
+                MinHeight="120">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Text="Operation Log" 
+                               Foreground="#eebb88" 
+                               FontWeight="Bold" 
+                               FontSize="14"/>
+                    
+                    <Button Grid.Column="1"
+                            Content="✕"
+                            Command="{Binding ClearLogCommand}"
+                            Style="{StaticResource IconButtonStyle}"
+                            ToolTip="Clear Log"/>
+                </Grid>
+                
+                <ScrollViewer Grid.Row="1" 
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+                    <TextBlock Text="{Binding OperationLog}"
+                               FontFamily="Consolas, Courier New"
+                               FontSize="11"
+                               Foreground="#f5f0eb"
+                               TextWrapping="Wrap"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Border Grid.Row="0" Grid.RowSpan="4"
+                Background="#80000000" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                CornerRadius="8">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="🔄 Loading firewall rules..." 
+                           Foreground="#eebb88" 
+                           FontSize="18" 
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Scanning ~22,000+ rules to filter AppIntBlocker rules..." 
+                           Foreground="#a8a29c" 
+                           FontSize="12" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,10,0,0"/>
+                <TextBlock Text="This may take up to 5 seconds..." 
+                           Foreground="#a8a29c" 
+                           FontSize="11" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl> 

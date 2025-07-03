@@ -1,0 +1,79 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Data;
+
+namespace AppIntBlockerGUI.Converters
+{
+    public class LogFormattingConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length < 4)
+                return string.Empty;
+
+            var logEntries = values[0] as ObservableCollection<string>;
+            var enableDetailedLogging = values[1] as bool? ?? false;
+            var asciiArt = values[2] as string ?? "";
+            var welcomeMessage = values[3] as string ?? "";
+
+            if (logEntries == null)
+                return string.Empty;
+
+            // Combine all log entries into a single formatted string
+            var formattedEntries = logEntries.Select(entry => FormatLogEntry(entry)).ToArray();
+            return string.Join(Environment.NewLine, formattedEntries);
+        }
+
+        private string FormatLogEntry(string entry)
+        {
+            if (string.IsNullOrEmpty(entry))
+                return entry;
+
+            // Color coding for different log levels (using terminal-style formatting)
+            if (entry.Contains("[ERROR]"))
+                return $"\u001b[31m{entry}\u001b[0m"; // Red
+            if (entry.Contains("[WARNING]"))
+                return $"\u001b[33m{entry}\u001b[0m"; // Yellow
+            if (entry.Contains("[SUCCESS]"))
+                return $"\u001b[32m{entry}\u001b[0m"; // Green
+            if (entry.Contains("[INFO]"))
+                return $"\u001b[36m{entry}\u001b[0m"; // Cyan
+            
+            return entry; // Default white
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    // Keep the original LogHighlightConverter for backward compatibility
+    public class LogHighlightConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string logEntry)
+            {
+                // Return color based on log level
+                if (logEntry.Contains("[ERROR]"))
+                    return "#e74a35"; // Red
+                if (logEntry.Contains("[WARNING]"))
+                    return "#f1c232"; // Yellow
+                if (logEntry.Contains("[SUCCESS]"))
+                    return "#34a853"; // Green
+                if (logEntry.Contains("[INFO]"))
+                    return "#eebb88"; // Orange
+            }
+            
+            return "#f5f0eb"; // Default white
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+} 

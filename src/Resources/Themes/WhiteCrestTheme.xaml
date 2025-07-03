@@ -1,0 +1,72 @@
+<!-- File: Resources/Themes/WhiteCrestTheme.xaml -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- White Crest Theme Palette -->
+    <!-- Primary paper-like background -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#f9f8ef"/>
+    
+    <!-- Muted lavender-gray for panels and cards -->
+    <SolidColorBrush x:Key="CardBrush" Color="#c9c3d2"/>
+    
+    <!-- Vibrant purple for primary actions -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#5511dd"/>
+    
+    <!-- A slightly lighter purple for hover effects -->
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#6a2ee5"/>
+    
+    <!-- Dark, soft text color for high contrast and readability -->
+    <SolidColorBrush x:Key="TextBrush" Color="#2c2a2e"/>
+    
+    <!-- Muted gray for placeholder text and secondary info -->
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#888493"/>
+    
+    <!-- A gentle hover effect for list items, buttons, etc. -->
+    <SolidColorBrush x:Key="HoverBrush" Color="#e2ddef"/>
+    
+    <!-- Background for input controls like TextBox -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#ffffff"/>
+
+    <!-- Accent color for when a button is pressed -->
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#4909cc"/>
+
+    <!-- A deep, desaturated red for errors and warnings -->
+    <SolidColorBrush x:Key="ErrorBrush" Color="#5a2538"/>
+
+    <!-- MahApps.Metro Comprehensive Override for Light Theme -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent" Color="#5511dd"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent2" Color="#6a2ee5"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent3" Color="#4909cc"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Accent4" Color="#3d08bb"/>
+    
+    <!-- Window and Control Backgrounds -->
+    <SolidColorBrush x:Key="MahApps.Brushes.ThemeBackground" Color="#f9f8ef"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.ThemeForeground" Color="#2c2a2e"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.WindowBackground" Color="#f9f8ef"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Control.Background" Color="#c9c3d2"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.ControlText" Color="#2c2a2e"/>
+    
+    <!-- Text and Input Controls -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Text" Color="#2c2a2e"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Label" Color="#2c2a2e"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TextBox.Background" Color="#ffffff"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TextBox.Border" Color="#5511dd"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TextBox.Foreground" Color="#2c2a2e"/>
+    
+    <!-- Borders and Separators -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Border" Color="#c9c3d2"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Separator" Color="#c9c3d2"/>
+    
+    <!-- Button States -->
+    <SolidColorBrush x:Key="MahApps.Brushes.Button.Background" Color="#c9c3d2"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Button.Border" Color="#5511dd"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.Button.Foreground" Color="#2c2a2e"/>
+    
+    <!-- TabControl Override -->
+    <SolidColorBrush x:Key="MahApps.Brushes.TabControl.Background" Color="#f9f8ef"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabItem.Background" Color="#c9c3d2"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabItem.Foreground" Color="#2c2a2e"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabItem.Selected.Background" Color="#5511dd"/>
+    <SolidColorBrush x:Key="MahApps.Brushes.TabItem.Selected.Foreground" Color="#ffffff"/>
+
+</ResourceDictionary> 

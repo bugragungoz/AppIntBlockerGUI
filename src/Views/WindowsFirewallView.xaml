@@ -1,0 +1,165 @@
+<UserControl x:Class="AppIntBlockerGUI.Views.WindowsFirewallView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="{StaticResource BackgroundBrush}">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" 
+               Background="{StaticResource CardBrush}" 
+               Padding="20" 
+               CornerRadius="5"
+               Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="WINDOWS FIREWALL MANAGEMENT" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="18" 
+                              FontWeight="Bold" 
+                              Margin="0,0,0,5"/>
+                    
+                    <TextBlock Text="Comprehensive firewall rule management and monitoring" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              FontSize="12"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="🔥 Open wf.msc"
+                           Style="{StaticResource ModernButtonStyle}"
+                           Margin="0,0,10,0"
+                           Command="{Binding OpenFirewallConsoleCommand}"/>
+                    
+                    <Button Content="↻ Refresh"
+                           Style="{StaticResource ModernButtonStyle}"
+                           Command="{Binding RefreshCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Statistics Panel -->
+        <Border Grid.Row="1" 
+               Background="{StaticResource CardBrush}" 
+               Padding="20" 
+               CornerRadius="5"
+               Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                    <TextBlock Text="TOTAL RULES" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="12" 
+                              FontWeight="Bold" 
+                              Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding TotalRules}" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="20"
+                              FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Margin="15,0">
+                    <TextBlock Text="INBOUND RULES" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="12" 
+                              FontWeight="Bold" 
+                              Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding InboundRules}" 
+                              Foreground="{StaticResource TextBrush}" 
+                              FontSize="16"
+                              FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Margin="15,0">
+                    <TextBlock Text="OUTBOUND RULES" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="12" 
+                              FontWeight="Bold" 
+                              Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding OutboundRules}" 
+                              Foreground="{StaticResource TextBrush}" 
+                              FontSize="16"
+                              FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="3" Margin="15,0,0,0">
+                    <TextBlock Text="APPINTBLOCKER" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="12" 
+                              FontWeight="Bold" 
+                              Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding AppIntBlockerRules}" 
+                              Foreground="{StaticResource AccentBrush}" 
+                              FontSize="16"
+                              FontWeight="Bold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Main Content -->
+        <Border Grid.Row="2" 
+               Background="{StaticResource CardBrush}" 
+               Padding="20" 
+               CornerRadius="5">
+            <StackPanel>
+                <TextBlock Text="FIREWALL RULES" 
+                          Foreground="{StaticResource AccentBrush}" 
+                          FontSize="16" 
+                          FontWeight="Bold" 
+                          Margin="0,0,0,15"/>
+                
+                <TextBlock Text="Firewall rules management is coming soon..." 
+                          Foreground="{StaticResource TextBrush}" 
+                          FontSize="14"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="3" 
+               Background="{StaticResource CardBrush}" 
+               Padding="15,10" 
+               CornerRadius="5"
+               Margin="0,15,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0"
+                          Text="{Binding StatusMessage}" 
+                          Foreground="{StaticResource TextBrush}" 
+                          FontSize="11"
+                          VerticalAlignment="Center"/>
+                
+                <TextBlock Grid.Column="1"
+                          Text="{Binding LastRefreshTime, StringFormat='Last refresh: {0:HH:mm:ss}'}" 
+                          Foreground="{StaticResource SecondaryTextBrush}" 
+                          FontSize="10"
+                          VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl> 

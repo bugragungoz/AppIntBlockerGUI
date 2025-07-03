@@ -1,0 +1,309 @@
+<UserControl x:Class="AppIntBlockerGUI.Views.BlockApplicationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:converters="clr-namespace:AppIntBlockerGUI.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter" />
+        <converters:LogHighlightConverter x:Key="LogHighlightConverter" />
+        <!-- Custom TextBox Style to fix input issue -->
+        <Style x:Key="InputBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#3a3a3a"/>
+            <Setter Property="Foreground" Value="#f5f0eb"/>
+            <Setter Property="BorderBrush" Value="#777"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="CaretBrush" Value="#f5f0eb"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#eebb88"/>
+                                <Setter TargetName="border" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- File Info Style -->
+        <Style x:Key="FileInfoTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#f5f0eb"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,2"/>
+        </Style>
+        
+        <!-- Section Header Style -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#eebb88"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="1.5*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- TOP SECTION: Path, Block Settings, File Info -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- First Row: Path and Block Settings -->
+            <Grid Grid.Row="0" Margin="0,0,0,15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Path Section -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Name" Foreground="#eebb88" Margin="0,0,0,4"/>
+                    <Grid>
+                        <TextBox x:Name="NameTextBox"
+                                 Text="{Binding OperationName, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource InputBoxStyle}"
+                                 Height="40"
+                                 Margin="0,0,0,8"
+                                 FontSize="14"/>
+                        <TextBlock Text="Give a name for the rule..."
+                                   Foreground="#888"
+                                   IsHitTestVisible="False"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Left"
+                                   Margin="15,0,0,8"
+                                   FontSize="14">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Text, ElementName=NameTextBox}" Value=""/>
+                                                <Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=NameTextBox}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <TextBlock Text="Path" Foreground="#eebb88" Margin="0,0,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0">
+                            <TextBox x:Name="PathTextBox"
+                                     Text="{Binding ApplicationPath, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource InputBoxStyle}"
+                                     Height="40"
+                                     FontSize="14"/>
+                            <TextBlock Text="Enter or browse the application path..."
+                                       Foreground="#888"
+                                       IsHitTestVisible="False"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="15,0,0,0"
+                                       FontSize="14">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Text, ElementName=PathTextBox}" Value=""/>
+                                                    <Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=PathTextBox}" Value="False"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+
+                        <Button Grid.Column="1"
+                                Content="Browse..."
+                                Command="{Binding BrowseCommand}"
+                                Height="40"
+                                Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <Button Content="🛡️ BLOCK APPLICATION"
+                            Command="{Binding BlockApplicationCommand}"
+                            Style="{StaticResource ModernButtonStyle}"
+                            FontSize="14"
+                            MinHeight="45"
+                            Margin="0,15,0,0"/>
+                </StackPanel>
+                
+                <!-- Block Settings Section -->
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Block Settings" Style="{StaticResource SectionHeaderStyle}"/>
+                    
+                    <CheckBox Content="Include EXE Files" 
+                              IsChecked="{Binding IncludeExeFiles}"
+                              Margin="0,4"/>
+                    
+                    <CheckBox Content="Include DLL Files" 
+                              IsChecked="{Binding IncludeDllFiles}"
+                              Margin="0,4"/>
+                    
+                    <CheckBox Content="Include Subfolders" 
+                              IsChecked="{Binding IncludeSubfolders}"
+                              Margin="0,4"/>
+                    
+                    <CheckBox Content="Create Restore Point" 
+                              IsChecked="{Binding CreateRestorePoint}"
+                              Margin="0,4"/>
+                    
+                    <CheckBox Content="Use Exclusions" 
+                              IsChecked="{Binding UseExclusions}"
+                              Margin="0,4"/>
+                    
+                    <CheckBox Content="Enable Detailed Logging" 
+                              IsChecked="{Binding EnableDetailedLogging}"
+                              Margin="0,4"/>
+                </StackPanel>
+
+                <!-- Exclude Options Section -->
+                <StackPanel Grid.Column="4" Visibility="{Binding UseExclusions, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="Exclude Options" Style="{StaticResource SectionHeaderStyle}"/>
+
+                    <TextBlock Text="Excluded Keywords:" 
+                               Foreground="#f5f0eb" 
+                               FontSize="12" 
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ExcludedKeywords, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="Keywords: telemetry, update, crashreporter..."
+                             Style="{StaticResource InputBoxStyle}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="40"
+                             Margin="0,0,0,8"/>
+
+                    <TextBlock Text="Excluded Files:" 
+                               Foreground="#f5f0eb" 
+                               FontSize="12" 
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ExcludedFiles, UpdateSourceTrigger=PropertyChanged}"
+                             Tag="Enter file paths separated by semicolons..."
+                             Style="{StaticResource InputBoxStyle}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="40"/>
+                </StackPanel>
+
+                <!-- Rule Info Section -->
+                <StackPanel Grid.Column="6">
+                    <TextBlock Text="Rule Information" Style="{StaticResource SectionHeaderStyle}"/>
+
+                    <TextBlock Text="{Binding FullRuleName, StringFormat='Rule Name: {0}'}" 
+                               Style="{StaticResource FileInfoTextStyle}"/>
+                    
+                    <TextBlock Text="{Binding FolderName, StringFormat='Folder Name: {0}'}" 
+                               Style="{StaticResource FileInfoTextStyle}"/>
+                    
+                    <TextBlock Text="{Binding SubfoldersIncluded, StringFormat='Subfolders Included: {0}'}" 
+                               Style="{StaticResource FileInfoTextStyle}"/>
+                    
+                    <TextBlock Text="{Binding ExecutableFilesCount, StringFormat='Executable Files: {0}'}" 
+                               Style="{StaticResource FileInfoTextStyle}"/>
+                    
+                    <TextBlock Text="{Binding LibraryFilesCount, StringFormat='Library Files: {0}'}" 
+                               Style="{StaticResource FileInfoTextStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+        
+        <!-- BOTTOM SECTION: Expanded Activity Terminal -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Activity Terminal Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Text="Activity Terminal" Style="{StaticResource SectionHeaderStyle}"/>
+                
+                <Button Grid.Column="1"
+                        Content="✕"
+                        Command="{Binding ClearLogCommand}"
+                        Width="25" Height="25"
+                        Background="Transparent"
+                        BorderBrush="{StaticResource AccentBrush}"
+                        BorderThickness="1"
+                        Foreground="{StaticResource AccentBrush}"
+                        FontWeight="Bold"
+                        ToolTip="Clear Terminal"/>
+            </Grid>
+            
+            <!-- Terminal Content -->
+            <Border Grid.Row="1" 
+                    Background="#0a0a0a" 
+                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="15">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding LogEntries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontFamily="Consolas, Courier New"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Foreground="{Binding Converter={StaticResource LogHighlightConverter}}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl> 
