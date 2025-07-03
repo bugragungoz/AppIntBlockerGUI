@@ -52,26 +52,30 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 ### Prerequisites
 - Windows 10/11
 - .NET 8.0 Runtime
-- Administrator privileges (automatically requested)
+- Administrator privileges (the application will request them automatically)
 
 ### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
-   cd AppIntBlockerGUI
-   ```
 
-2. Build the application:
-   ```bash
-   cd src/AppIntBlockerGUI
-   dotnet build --configuration Release
-   ```
+**1. Clone the Repository**
+```bash
+git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
+```
 
-3. Run the application:
-   ```bash
-   dotnet run
-   ```
-   *The application will automatically request administrator privileges if needed.*
+**2. Navigate to the Source Directory**
+```bash
+cd AppIntBlockerGUI/src
+```
+
+**3. Build the Application**
+```bash
+dotnet build
+```
+
+**4. Run the Application**
+```bash
+dotnet run
+```
+*The application will automatically request administrator privileges if needed.*
 
 ## Project Structure
 
@@ -125,7 +129,7 @@ cd AppIntBlockerGUI/src/AppIntBlockerGUI
 dotnet restore
 
 # Build
-dotnet build --configuration Release
+dotnet build
 
 # Run
 dotnet run
