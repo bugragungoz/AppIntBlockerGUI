@@ -1,16 +1,22 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Security.Cryptography;
-using AppIntBlockerGUI.Models;
-using Newtonsoft.Json;
+// <copyright file="SettingsService.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Services
 {
+    using System;
+    using System.IO;
+    using System.Security.Cryptography;
+    using System.Text;
+    using AppIntBlockerGUI.Models;
+    using Newtonsoft.Json;
+
     public interface ISettingsService
     {
         AppSettings LoadSettings();
+
         void SaveSettings(AppSettings settings);
+
         string GetSettingsFilePath();
     }
 
@@ -18,7 +24,7 @@ namespace AppIntBlockerGUI.Services
     {
         private static readonly string AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AppIntBlockerGUI");
         private static readonly string SettingsFilePath = Path.Combine(AppDataPath, "settings.json.protected");
-        
+
         // Optional: Entropy adds an extra layer of security, but makes the data non-portable
         private static readonly byte[] Entropy = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
@@ -73,4 +79,4 @@ namespace AppIntBlockerGUI.Services
 
         public string GetSettingsFilePath() => SettingsFilePath;
     }
-} 
+}

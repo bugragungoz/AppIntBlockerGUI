@@ -1,20 +1,24 @@
-using System;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using AppIntBlockerGUI.Services;
+// <copyright file="RestorePointsViewModel.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.ViewModels
 {
+    using System;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using AppIntBlockerGUI.Services;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+
     public partial class RestorePointsViewModel : ObservableObject
     {
-        private readonly SystemRestoreService _restoreService;
-        private readonly IDialogService _dialogService;
-        private readonly ILoggingService _loggingService;
+        private readonly SystemRestoreService restoreService;
+        private readonly IDialogService dialogService;
+        private readonly ILoggingService loggingService;
 
         [ObservableProperty]
         private ObservableCollection<SystemRestoreService.RestorePoint> restorePoints = new();
@@ -39,77 +43,77 @@ namespace AppIntBlockerGUI.ViewModels
 
         public RestorePointsViewModel()
         {
-            _restoreService = new SystemRestoreService();
-            _dialogService = new DialogService();
-            _loggingService = new LoggingService();
+            this.restoreService = new SystemRestoreService();
+            this.dialogService = new DialogService();
+            this.loggingService = new LoggingService();
 
             // Load restore points on initialization
-            _ = InitializeAsync();
+            _ = this.InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            StatusMessage = "Initializing restore points...";
-            await CheckSystemRestoreStatus();
-            await LoadRestorePointsAsync();
+            this.StatusMessage = "Initializing restore points...";
+            await this.CheckSystemRestoreStatus();
+            await this.LoadRestorePointsAsync();
         }
 
         private async Task CheckSystemRestoreStatus()
         {
             try
             {
-                var isEnabled = await _restoreService.IsSystemRestoreEnabledAsync();
-                SystemRestoreStatus = isEnabled ? "System Restore is enabled" : "System Restore is disabled";
-                
+                var isEnabled = await this.restoreService.IsSystemRestoreEnabledAsync();
+                this.SystemRestoreStatus = isEnabled ? "System Restore is enabled" : "System Restore is disabled";
+
                 if (!isEnabled)
                 {
-                    StatusMessage = "Warning: System Restore is disabled on this system";
+                    this.StatusMessage = "Warning: System Restore is disabled on this system";
                 }
             }
             catch (Exception ex)
             {
-                SystemRestoreStatus = "Unable to check status";
-                _loggingService.LogError("Error checking system restore status", ex);
+                this.SystemRestoreStatus = "Unable to check status";
+                this.loggingService.LogError("Error checking system restore status", ex);
             }
         }
 
         [RelayCommand]
         private async Task Refresh()
         {
-            await LoadRestorePointsAsync();
+            await this.LoadRestorePointsAsync();
         }
 
         private async Task LoadRestorePointsAsync()
         {
             try
             {
-                StatusMessage = "Loading restore points...";
-                
-                var points = await _restoreService.GetRestorePointsAsync();
-                
+                this.StatusMessage = "Loading restore points...";
+
+                var points = await this.restoreService.GetRestorePointsAsync();
+
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    RestorePoints.Clear();
+                    this.RestorePoints.Clear();
                     foreach (var point in points.OrderByDescending(p => p.CreationTime))
                     {
-                        RestorePoints.Add(point);
+                        this.RestorePoints.Add(point);
                     }
-                    
-                    TotalRestorePoints = RestorePoints.Count;
-                    AppIntBlockerPoints = RestorePoints.Count(p => 
+
+                    this.TotalRestorePoints = this.RestorePoints.Count;
+                    this.AppIntBlockerPoints = this.RestorePoints.Count(p =>
                         p.Description.Contains("AppIntBlocker", StringComparison.OrdinalIgnoreCase));
-                    
-                    LastRefreshTime = DateTime.Now;
-                    StatusMessage = $"Loaded {TotalRestorePoints} restore points";
+
+                    this.LastRefreshTime = DateTime.Now;
+                    this.StatusMessage = $"Loaded {this.TotalRestorePoints} restore points";
                 });
-                
-                _loggingService.LogInfo($"Loaded {TotalRestorePoints} restore points, {AppIntBlockerPoints} created by AppIntBlocker");
+
+                this.loggingService.LogInfo($"Loaded {this.TotalRestorePoints} restore points, {this.AppIntBlockerPoints} created by AppIntBlocker");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error loading restore points", ex);
-                StatusMessage = "Error loading restore points";
-                _dialogService.ShowMessage("Failed to load restore points. Check the log for details.", "Error");
+                this.loggingService.LogError("Error loading restore points", ex);
+                this.StatusMessage = "Error loading restore points";
+                this.dialogService.ShowMessage("Failed to load restore points. Check the log for details.", "Error");
             }
         }
 
@@ -119,40 +123,40 @@ namespace AppIntBlockerGUI.ViewModels
             try
             {
                 var description = $"AppIntBlocker - Manual restore point {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-                
+
                 var confirmMessage = $"Create a new system restore point with description:\n\n\"{description}\"\n\n" +
                                    "This operation may take a few minutes. Continue?";
-                
-                if (!_dialogService.ShowConfirmation(confirmMessage, "Create Restore Point"))
+
+                if (!this.dialogService.ShowConfirmation(confirmMessage, "Create Restore Point"))
                 {
                     return;
                 }
 
-                StatusMessage = "Creating restore point...";
-                _loggingService.LogInfo($"Creating restore point: {description}");
+                this.StatusMessage = "Creating restore point...";
+                this.loggingService.LogInfo($"Creating restore point: {description}");
 
-                var success = await Task.Run(async () => 
+                var success = await Task.Run(async () =>
                 {
-                    return await _restoreService.CreateRestorePointAsync(description);
+                    return await this.restoreService.CreateRestorePointAsync(description);
                 });
 
                 if (success)
                 {
-                    StatusMessage = "Restore point created successfully";
-                    _dialogService.ShowMessage("Restore point created successfully!", "Success");
-                    await LoadRestorePointsAsync();
+                    this.StatusMessage = "Restore point created successfully";
+                    this.dialogService.ShowMessage("Restore point created successfully!", "Success");
+                    await this.LoadRestorePointsAsync();
                 }
                 else
                 {
-                    StatusMessage = "Failed to create restore point";
-                    _dialogService.ShowMessage("Failed to create restore point. Make sure System Restore is enabled and you have administrator privileges.", "Error");
+                    this.StatusMessage = "Failed to create restore point";
+                    this.dialogService.ShowMessage("Failed to create restore point. Make sure System Restore is enabled and you have administrator privileges.", "Error");
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error creating restore point", ex);
-                StatusMessage = "Error creating restore point";
-                _dialogService.ShowMessage("An error occurred while creating the restore point. Check the log for details.", "Error");
+                this.loggingService.LogError("Error creating restore point", ex);
+                this.StatusMessage = "Error creating restore point";
+                this.dialogService.ShowMessage("An error occurred while creating the restore point. Check the log for details.", "Error");
             }
         }
 
@@ -167,19 +171,22 @@ namespace AppIntBlockerGUI.ViewModels
                     FileName = "SystemPropertiesProtection.exe"
                 };
                 Process.Start(processInfo);
-                _loggingService.LogInfo("Opened Windows System Restore tool.");
+                this.loggingService.LogInfo("Opened Windows System Restore tool.");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Failed to open System Restore tool.", ex);
-                _dialogService.ShowError("Could not open the Windows System Restore tool. You may need to open it manually from the Control Panel (System > System Protection).");
+                this.loggingService.LogError("Failed to open System Restore tool.", ex);
+                this.dialogService.ShowError("Could not open the Windows System Restore tool. You may need to open it manually from the Control Panel (System > System Protection).");
             }
         }
 
         [RelayCommand]
         private async Task RestoreSystem(SystemRestoreService.RestorePoint restorePoint)
         {
-            if (restorePoint == null) return;
+            if (restorePoint == null)
+            {
+                return;
+            }
 
             try
             {
@@ -195,49 +202,53 @@ namespace AppIntBlockerGUI.ViewModels
                                    $"Save all your work before continuing!\n\n" +
                                    $"Are you absolutely sure you want to proceed?";
 
-                if (!_dialogService.ShowConfirmation(confirmMessage, "SYSTEM RESTORE WARNING"))
+                if (!this.dialogService.ShowConfirmation(confirmMessage, "SYSTEM RESTORE WARNING"))
                 {
                     return;
                 }
 
-                StatusMessage = "Initiating system restore...";
-                _loggingService.LogInfo($"Initiating system restore to point {restorePoint.SequenceNumber}: {restorePoint.Description}");
+                this.StatusMessage = "Initiating system restore...";
+                this.loggingService.LogInfo($"Initiating system restore to point {restorePoint.SequenceNumber}: {restorePoint.Description}");
 
                 // Show final warning
-                var finalConfirm = _dialogService.ShowConfirmation(
+                var finalConfirm = this.dialogService.ShowConfirmation(
                     "FINAL CONFIRMATION\n\nThis is your last chance to cancel.\n\nThe system will restart immediately after clicking OK.\n\nProceed with system restore?",
                     "FINAL WARNING");
 
                 if (!finalConfirm)
                 {
-                    StatusMessage = "System restore cancelled";
+                    this.StatusMessage = "System restore cancelled";
                     return;
                 }
 
-                var success = await Task.Run(async () => 
+                var success = await Task.Run(async () =>
                 {
-                    return await _restoreService.RestoreSystemAsync(restorePoint.SequenceNumber);
+                    return await this.restoreService.RestoreSystemAsync(restorePoint.SequenceNumber);
                 });
 
                 if (!success)
                 {
-                    StatusMessage = "Failed to initiate system restore";
-                    _dialogService.ShowMessage("Failed to initiate system restore. Check the log for details.", "Error");
+                    this.StatusMessage = "Failed to initiate system restore";
+                    this.dialogService.ShowMessage("Failed to initiate system restore. Check the log for details.", "Error");
                 }
+
                 // If successful, the system will restart and we won't reach this point
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Error restoring system to point {restorePoint.SequenceNumber}", ex);
-                StatusMessage = "Error during system restore";
-                _dialogService.ShowMessage("An error occurred during system restore. Check the log for details.", "Error");
+                this.loggingService.LogError($"Error restoring system to point {restorePoint.SequenceNumber}", ex);
+                this.StatusMessage = "Error during system restore";
+                this.dialogService.ShowMessage("An error occurred during system restore. Check the log for details.", "Error");
             }
         }
 
         [RelayCommand]
         private void DeleteRestorePoint(SystemRestoreService.RestorePoint restorePoint)
         {
-            if (restorePoint == null) return;
+            if (restorePoint == null)
+            {
+                return;
+            }
 
             try
             {
@@ -247,17 +258,17 @@ namespace AppIntBlockerGUI.ViewModels
                                    $"• Sequence Number: {restorePoint.SequenceNumber}\n\n" +
                                    $"This action cannot be undone. Continue?";
 
-                if (!_dialogService.ShowConfirmation(confirmMessage, "Delete Restore Point"))
+                if (!this.dialogService.ShowConfirmation(confirmMessage, "Delete Restore Point"))
                 {
                     return;
                 }
 
-                StatusMessage = "Deleting restore point...";
-                _loggingService.LogInfo($"Deleting restore point {restorePoint.SequenceNumber}: {restorePoint.Description}");
+                this.StatusMessage = "Deleting restore point...";
+                this.loggingService.LogInfo($"Deleting restore point {restorePoint.SequenceNumber}: {restorePoint.Description}");
 
                 // Note: Windows doesn't provide a direct API to delete specific restore points
                 // This is a limitation of the Windows System Restore API
-                _dialogService.ShowMessage(
+                this.dialogService.ShowMessage(
                     "Windows does not provide an API to delete individual restore points.\n\n" +
                     "To manage restore points, use:\n" +
                     "• Control Panel > System > System Protection\n" +
@@ -265,14 +276,14 @@ namespace AppIntBlockerGUI.ViewModels
                     "• PowerShell: vssadmin delete shadows commands",
                     "Feature Limitation");
 
-                StatusMessage = "Delete operation not available through API";
+                this.StatusMessage = "Delete operation not available through API";
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Error attempting to delete restore point {restorePoint.SequenceNumber}", ex);
-                StatusMessage = "Error during delete operation";
-                _dialogService.ShowMessage("An error occurred during the delete operation. Check the log for details.", "Error");
+                this.loggingService.LogError($"Error attempting to delete restore point {restorePoint.SequenceNumber}", ex);
+                this.StatusMessage = "Error during delete operation";
+                this.dialogService.ShowMessage("An error occurred during the delete operation. Check the log for details.", "Error");
             }
         }
     }
-} 
+}

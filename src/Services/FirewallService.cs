@@ -1,41 +1,52 @@
-using System.Management.Automation;
-using System.Collections.ObjectModel;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using AppIntBlockerGUI.Services;
-using System.Threading;
+// <copyright file="FirewallService.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Management.Automation;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using AppIntBlockerGUI.Services;
+
     public class FirewallService : IFirewallService
     {
         private const string RuleNamePrefix = "AppBlocker Rule - ";
 
         public async Task<bool> BlockApplicationFiles(
-            string path, 
-            bool blockExe, 
-            bool blockDll, 
-            bool includeSubdirectories, 
-            List<string> excludedKeywords, 
-            List<string> excludedFiles, 
-            ILoggingService logger, 
+            string path,
+            bool blockExe,
+            bool blockDll,
+            bool includeSubdirectories,
+            List<string> excludedKeywords,
+            List<string> excludedFiles,
+            ILoggingService logger,
             CancellationToken cancellationToken)
         {
             using (var powerShell = PowerShell.Create())
             {
-                if (!await ImportFirewallModules(powerShell, logger).ConfigureAwait(false))
+                if (!await this.ImportFirewallModules(powerShell, logger).ConfigureAwait(false))
                 {
                     logger.LogError("Failed to import required PowerShell modules. Aborting block operation.");
                     return false;
                 }
 
                 var extensions = new List<string>();
-                if (blockExe) extensions.Add("*.exe");
-                if (blockDll) extensions.Add("*.dll");
+                if (blockExe)
+                {
+                    extensions.Add("*.exe");
+                }
+
+                if (blockDll)
+                {
+                    extensions.Add("*.dll");
+                }
 
                 if (!extensions.Any())
                 {
@@ -75,8 +86,8 @@ namespace AppIntBlockerGUI.Services
                     }
 
                     var ruleName = $"AppBlocker Rule - {applicationName} - {Path.GetFileName(file)}";
-                    await CreateFirewallRule(powerShell, file, ruleName, "Inbound", logger).ConfigureAwait(false);
-                    await CreateFirewallRule(powerShell, file, ruleName, "Outbound", logger).ConfigureAwait(false);
+                    await this.CreateFirewallRule(powerShell, file, ruleName, "Inbound", logger).ConfigureAwait(false);
+                    await this.CreateFirewallRule(powerShell, file, ruleName, "Outbound", logger).ConfigureAwait(false);
                 }
 
                 logger.LogInfo($"Block operation completed for {applicationName}.");
@@ -128,14 +139,14 @@ namespace AppIntBlockerGUI.Services
             try
             {
                 // Try PowerShell first
-                if (await TryCreateFirewallRuleWithPowerShell(powerShell, filePath, displayName, direction, logger).ConfigureAwait(false))
+                if (await this.TryCreateFirewallRuleWithPowerShell(powerShell, filePath, displayName, direction, logger).ConfigureAwait(false))
                 {
                     return true;
                 }
 
                 // Fallback to netsh command
                 logger.LogInfo($"PowerShell failed, trying netsh for rule: {displayName}");
-                return await CreateFirewallRuleWithNetsh(filePath, displayName, direction, logger).ConfigureAwait(false);
+                return await this.CreateFirewallRuleWithNetsh(filePath, displayName, direction, logger).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -200,7 +211,7 @@ namespace AppIntBlockerGUI.Services
 
                     var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
                     var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-                    
+
                     await process.WaitForExitAsync().ConfigureAwait(false);
 
                     if (process.ExitCode == 0)
@@ -228,14 +239,14 @@ namespace AppIntBlockerGUI.Services
                 logger.LogInfo($"Removing firewall rules for application: {applicationName}");
 
                 // Try PowerShell first
-                if (await TryRemoveRulesWithPowerShell(applicationName, logger).ConfigureAwait(false))
+                if (await this.TryRemoveRulesWithPowerShell(applicationName, logger).ConfigureAwait(false))
                 {
                     return true;
                 }
 
                 // Fallback to netsh
                 logger.LogInfo("PowerShell removal failed, trying netsh approach...");
-                return await RemoveRulesWithNetsh(applicationName, logger).ConfigureAwait(false);
+                return await this.RemoveRulesWithNetsh(applicationName, logger).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -251,7 +262,7 @@ namespace AppIntBlockerGUI.Services
                 using (var powerShell = PowerShell.Create())
                 {
                     // Import required modules
-                    await ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
+                    await this.ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
 
                     // First, get ALL rules and filter manually (wildcard doesn't work reliably)
                     powerShell.Commands.Clear();
@@ -259,7 +270,7 @@ namespace AppIntBlockerGUI.Services
                         .AddParameter("ErrorAction", "SilentlyContinue");
 
                     var allRules = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
-                    
+
                     if (powerShell.HadErrors)
                     {
                         var errors = powerShell.Streams.Error.ReadAll();
@@ -290,7 +301,7 @@ namespace AppIntBlockerGUI.Services
                         try
                         {
                             var displayName = rule.Properties["DisplayName"]?.Value?.ToString();
-                            
+
                             if (!string.IsNullOrEmpty(displayName))
                             {
                                 powerShell.Commands.Clear();
@@ -310,6 +321,7 @@ namespace AppIntBlockerGUI.Services
                                     var errors = powerShell.Streams.Error.ReadAll();
                                     logger.LogWarning($"PowerShell error removing rule '{displayName}': {string.Join("; ", errors.Select(e => e.ToString()))}");
                                 }
+
                                 powerShell.Streams.Error.Clear();
                             }
                         }
@@ -439,12 +451,12 @@ namespace AppIntBlockerGUI.Services
             try
             {
                 logger.LogInfo("Getting all firewall rules and filtering for AppIntBlocker...");
-                
+
                 using (var powerShell = PowerShell.Create())
                 {
                     // Import modules first
-                    await ImportFirewallModules(powerShell, logger);
-                    
+                    await this.ImportFirewallModules(powerShell, logger);
+
                     // Get ALL firewall rules (more reliable than wildcard)
                     powerShell.Commands.Clear();
                     powerShell.AddCommand("Get-NetFirewallRule")
@@ -483,9 +495,9 @@ namespace AppIntBlockerGUI.Services
             catch (Exception ex)
             {
                 logger.LogError("Error getting existing firewall rules with PowerShell, trying netsh fallback", ex);
-                
+
                 // Fallback to netsh method
-                return await GetExistingRulesWithNetsh(logger);
+                return await this.GetExistingRulesWithNetsh(logger);
             }
         }
 
@@ -494,7 +506,7 @@ namespace AppIntBlockerGUI.Services
             try
             {
                 logger.LogInfo("Using netsh to get firewall rules...");
-                
+
                 var listProcess = new ProcessStartInfo
                 {
                     FileName = "netsh",
@@ -550,14 +562,14 @@ namespace AppIntBlockerGUI.Services
                 logger.LogInfo($"Removing single firewall rule: {ruleName}");
 
                 // First try PowerShell
-                if (await TryRemoveSingleRuleWithPowerShell(ruleName, logger))
+                if (await this.TryRemoveSingleRuleWithPowerShell(ruleName, logger))
                 {
                     return true;
                 }
 
                 // Fallback to netsh
                 logger.LogInfo("PowerShell failed, trying netsh for single rule removal");
-                return await RemoveSingleRuleWithNetsh(ruleName, logger);
+                return await this.RemoveSingleRuleWithNetsh(ruleName, logger);
             }
             catch (Exception ex)
             {
@@ -572,7 +584,7 @@ namespace AppIntBlockerGUI.Services
             {
                 using (var powerShell = PowerShell.Create())
                 {
-                    await ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
+                    await this.ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
 
                     powerShell.Commands.Clear();
                     powerShell.AddCommand("Remove-NetFirewallRule")
@@ -698,13 +710,13 @@ namespace AppIntBlockerGUI.Services
                         var rule = new AppIntBlockerGUI.Models.FirewallRuleModel
                         {
                             DisplayName = psObject.Properties["DisplayName"]?.Value?.ToString() ?? "Unknown",
-                            RuleName = psObject.Properties["Name"]?.Value?.ToString() ?? "",
-                            Direction = psObject.Properties["Direction"]?.Value?.ToString() ?? "",
-                            Action = psObject.Properties["Action"]?.Value?.ToString() ?? "",
-                            Protocol = psObject.Properties["Protocol"]?.Value?.ToString() ?? "",
-                            Profile = psObject.Properties["Profile"]?.Value?.ToString() ?? "",
-                            Description = psObject.Properties["Description"]?.Value?.ToString() ?? "",
-                            Group = psObject.Properties["Group"]?.Value?.ToString() ?? "",
+                            RuleName = psObject.Properties["Name"]?.Value?.ToString() ?? string.Empty,
+                            Direction = psObject.Properties["Direction"]?.Value?.ToString() ?? string.Empty,
+                            Action = psObject.Properties["Action"]?.Value?.ToString() ?? string.Empty,
+                            Protocol = psObject.Properties["Protocol"]?.Value?.ToString() ?? string.Empty,
+                            Profile = psObject.Properties["Profile"]?.Value?.ToString() ?? string.Empty,
+                            Description = psObject.Properties["Description"]?.Value?.ToString() ?? string.Empty,
+                            Group = psObject.Properties["Group"]?.Value?.ToString() ?? string.Empty,
                         };
 
                         if (bool.TryParse(psObject.Properties["Enabled"]?.Value?.ToString(), out bool enabled))
@@ -724,6 +736,7 @@ namespace AppIntBlockerGUI.Services
             {
                 // FIXED: Log the exception instead of silent fail
                 System.Diagnostics.Debug.WriteLine($"Exception getting all firewall rules: {ex.Message}");
+
                 // Return empty list on error
             }
 
@@ -802,7 +815,7 @@ namespace AppIntBlockerGUI.Services
                     FileName = "wf.msc",
                     UseShellExecute = true
                 });
-                
+
                 if (process == null)
                 {
                     throw new InvalidOperationException("Failed to start Windows Firewall management console");
@@ -813,7 +826,7 @@ namespace AppIntBlockerGUI.Services
                 // FIXED: Log the exception instead of silent fail
                 // Note: We don't have logger here, but we should avoid silent failures
                 System.Diagnostics.Debug.WriteLine($"Failed to open Windows Firewall with Advanced Security: {ex.Message}");
-                
+
                 // Consider showing user-friendly message in a real application
                 // _dialogService?.ShowError("Could not open Windows Firewall management console. " +
                 //     "Please open it manually from Control Panel.");
@@ -823,10 +836,12 @@ namespace AppIntBlockerGUI.Services
         private static string EscapeNetshArgument(string argument)
         {
             if (string.IsNullOrEmpty(argument))
+            {
                 return "\"\"";
-            
+            }
+
             // Per netsh documentation, a quote is escaped by doubling it.
             return "\"" + argument.Replace("\"", "\"\"") + "\"";
         }
     }
-} 
+}
