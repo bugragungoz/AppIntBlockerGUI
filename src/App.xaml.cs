@@ -1,17 +1,21 @@
-﻿using System.Configuration;
+// <copyright file="App.xaml.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+using System;
+using System.Configuration;
 using System.Data;
+using System.Diagnostics;
+using System.Security.Principal;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Microsoft.Extensions.DependencyInjection;
+using System.Windows.Threading;
 using AppIntBlockerGUI.Services;
 using AppIntBlockerGUI.ViewModels;
-using System;
-using System.Security.Principal;
-using System.Diagnostics;
 using AppIntBlockerGUI.Views;
-using System.Threading.Tasks;
-using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AppIntBlockerGUI;
 
@@ -20,26 +24,27 @@ namespace AppIntBlockerGUI;
 /// </summary>
 public partial class App : Application
 {
-    private readonly IServiceProvider _serviceProvider;
-    
+    private readonly IServiceProvider serviceProvider;
+
     public static IServiceProvider? ServiceProvider { get; private set; }
 
     public App()
     {
         // Global exception handlers
-        this.DispatcherUnhandledException += Application_DispatcherUnhandledException;
+        this.DispatcherUnhandledException += this.Application_DispatcherUnhandledException;
 
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
         {
             var ex = e.ExceptionObject as Exception;
-            MessageBox.Show($"Fatal Exception: {ex?.Message}\n\nStack Trace:\n{ex?.StackTrace}",
+            MessageBox.Show(
+                $"Fatal Exception: {ex?.Message}\n\nStack Trace:\n{ex?.StackTrace}",
                 "Fatal Exception", MessageBoxButton.OK, MessageBoxImage.Error);
         };
 
         var services = new ServiceCollection();
-        ConfigureServices(services);
-        _serviceProvider = services.BuildServiceProvider();
-        ServiceProvider = _serviceProvider; // Set static reference
+        this.ConfigureServices(services);
+        this.serviceProvider = services.BuildServiceProvider();
+        ServiceProvider = this.serviceProvider; // Set static reference
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -54,7 +59,7 @@ public partial class App : Application
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
-        services.AddSingleton<BlockApplicationViewModel>(); 
+        services.AddSingleton<BlockApplicationViewModel>();
         services.AddTransient<ManageRulesViewModel>();
         services.AddTransient<RestorePointsViewModel>();
         services.AddTransient<WindowsFirewallViewModel>();
@@ -67,20 +72,21 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        
+
         // Use fire-and-forget with proper exception handling
         _ = Task.Run(async () =>
         {
             try
             {
-                await InitializeApplicationAsync().ConfigureAwait(false);
+                await this.InitializeApplicationAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 // Log the exception and show user-friendly message
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    MessageBox.Show($"Application initialization failed: {ex.Message}", 
+                    MessageBox.Show(
+                        $"Application initialization failed: {ex.Message}",
                         "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     Application.Current.Shutdown(1);
                 });
@@ -105,17 +111,17 @@ public partial class App : Application
             });
 
             // Background initialization
-            var blockAppViewModel = _serviceProvider.GetRequiredService<BlockApplicationViewModel>();
+            var blockAppViewModel = this.serviceProvider.GetRequiredService<BlockApplicationViewModel>();
             await blockAppViewModel.InitializeAsync().ConfigureAwait(false);
 
-            var mainViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
+            var mainViewModel = this.serviceProvider.GetRequiredService<MainWindowViewModel>();
             await mainViewModel.LoadInitialDataAsync().ConfigureAwait(false);
 
             // Switch to main window on UI thread
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 loadingWindow?.UpdateStatus("Finalizing...");
-                mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                mainWindow = this.serviceProvider.GetRequiredService<MainWindow>();
                 Application.Current.MainWindow = mainWindow;
                 loadingWindow?.Close();
                 mainWindow.Show();
@@ -137,7 +143,7 @@ public partial class App : Application
 
             if (confirmationDialog.ShowDialog() == true)
             {
-                if (!RestartAsAdministrator())
+                if (!this.RestartAsAdministrator())
                 {
                     // Failure, UAC was likely denied. Show a message.
                     var warningDialog = new CustomDialogWindow("Permission Denied", "Administrator privileges were not granted. The application cannot continue.", "⚠️");
@@ -152,7 +158,7 @@ public partial class App : Application
             }
 
             // After all dialogs are handled, explicitly shut down.
-            Shutdown();
+            this.Shutdown();
         });
     }
 
@@ -185,7 +191,7 @@ public partial class App : Application
             Verb = "runas",
             UseShellExecute = true
         };
-        
+
         try
         {
             Process.Start(startInfo);
@@ -208,11 +214,15 @@ public partial class App : Application
     {
         // CRITICAL FIX: Dispose static ServiceProvider
         if (ServiceProvider is IDisposable disposableStatic)
+        {
             disposableStatic.Dispose();
-            
-        if (_serviceProvider is IDisposable disposable)
+        }
+
+        if (this.serviceProvider is IDisposable disposable)
+        {
             disposable.Dispose();
-            
+        }
+
         base.OnExit(e);
     }
 
@@ -237,11 +247,12 @@ public partial class App : Application
     /// Sanitizes error messages to prevent sensitive information disclosure.
     /// AI-generated code: Enhanced error handling for security.
     /// </summary>
+    /// <returns></returns>
     private static string SanitizeErrorMessage(Exception exception)
     {
         // Don't expose detailed error information that could help attackers
         var exceptionType = exception.GetType().Name;
-        
+
         // Map specific exceptions to safe, user-friendly messages
         return exceptionType switch
         {
@@ -262,23 +273,22 @@ public partial class App : Application
     private void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         var exceptionType = e.Exception.GetType().Name;
-        
+
         // Sanitize the error message to prevent information disclosure
         var userFriendlyMessage = SanitizeErrorMessage(e.Exception);
 
         // Log the full exception details for debugging purposes (but not to user)
         // In production, this should go to a secure logging system
         Debug.WriteLine($"[FATAL] Unhandled Exception: {e.Exception}");
-        
+
         // Only show sanitized, user-friendly message to the user
         MessageBox.Show(
             $"{userFriendlyMessage}\n\nError ID: {Guid.NewGuid():N}\n\nIf this problem persists, please contact support with the Error ID.",
-            "Application Error", 
-            MessageBoxButton.OK, 
+            "Application Error",
+            MessageBoxButton.OK,
             MessageBoxImage.Error);
 
         e.Handled = true;
         Current.Shutdown();
     }
 }
-

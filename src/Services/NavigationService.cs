@@ -1,26 +1,32 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
+// <copyright file="NavigationService.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Services
 {
-    public class DefaultViewModel : ObservableObject { }
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using Microsoft.Extensions.DependencyInjection;
+
+    public class DefaultViewModel : ObservableObject
+    {
+    }
 
     public class NavigationService : ObservableObject, INavigationService
     {
-        private readonly IServiceProvider _serviceProvider;
-        private ObservableObject _currentViewModel;
+        private readonly IServiceProvider serviceProvider;
+        private ObservableObject currentViewModel;
 
         public ObservableObject CurrentViewModel
         {
-            get => _currentViewModel;
+            get => this.currentViewModel;
             private set
             {
-                if (SetProperty(ref _currentViewModel, value))
+                if (this.SetProperty(ref this.currentViewModel, value))
                 {
-                    NavigationChanged?.Invoke(value);
+                    this.NavigationChanged?.Invoke(value);
                 }
             }
         }
@@ -29,16 +35,19 @@ namespace AppIntBlockerGUI.Services
 
         public NavigationService(IServiceProvider serviceProvider)
         {
-            _serviceProvider = serviceProvider;
-            _currentViewModel = new DefaultViewModel(); // Use a concrete type
+            this.serviceProvider = serviceProvider;
+            this.currentViewModel = new DefaultViewModel(); // Use a concrete type
         }
 
         public void NavigateTo(Type viewModelType)
         {
-            var viewModel = _serviceProvider.GetRequiredService(viewModelType) as ObservableObject;
-            if (viewModel == null) return;
+            var viewModel = this.serviceProvider.GetRequiredService(viewModelType) as ObservableObject;
+            if (viewModel == null)
+            {
+                return;
+            }
 
-            CurrentViewModel = viewModel;
+            this.CurrentViewModel = viewModel;
 
             // Asynchronously initialize the ViewModel if it has an InitializeAsync method
             var initializeMethod = viewModel.GetType().GetMethod("InitializeAsync");
@@ -48,4 +57,4 @@ namespace AppIntBlockerGUI.Services
             }
         }
     }
-} 
+}

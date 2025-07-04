@@ -1,9 +1,13 @@
-using System.Windows;
-using AppIntBlockerGUI.Views;
-using Microsoft.Win32;
+// <copyright file="DialogService.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Services
 {
+    using System.Windows;
+    using AppIntBlockerGUI.Views;
+    using Microsoft.Win32;
+
     public class DialogService : IDialogService
     {
         public string? OpenFolderDialog()
@@ -23,6 +27,7 @@ namespace AppIntBlockerGUI.Services
             {
                 return System.IO.Path.GetDirectoryName(dialog.FileName);
             }
+
             return null;
         }
 
@@ -40,6 +45,7 @@ namespace AppIntBlockerGUI.Services
             {
                 return dialog.FileName;
             }
+
             return null;
         }
 
@@ -57,12 +63,13 @@ namespace AppIntBlockerGUI.Services
             {
                 return dialog.FileName;
             }
+
             return null;
         }
 
         public void ShowMessage(string message, string title = "Information")
         {
-            ShowInfo(message, title);
+            this.ShowInfo(message, title);
         }
 
         public void ShowInfo(string message, string title = "Information")
@@ -89,4 +96,4 @@ namespace AppIntBlockerGUI.Services
             return dialog.ShowDialog() == true;
         }
     }
-} 
+}

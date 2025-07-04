@@ -1,8 +1,12 @@
-using System.Windows.Controls;
-using AppIntBlockerGUI.ViewModels;
+// <copyright file="ManageRulesView.xaml.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Views
 {
+    using System.Windows.Controls;
+    using AppIntBlockerGUI.ViewModels;
+
     /// <summary>
     /// Interaction logic for ManageRulesView.xaml
     /// </summary>
@@ -10,10 +14,10 @@ namespace AppIntBlockerGUI.Views
     {
         public ManageRulesView()
         {
-            InitializeComponent();
-            
+            this.InitializeComponent();
+
             // Auto refresh when the view becomes visible
-            this.IsVisibleChanged += OnVisibilityChanged;
+            this.IsVisibleChanged += this.OnVisibilityChanged;
         }
 
         private void OnVisibilityChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
@@ -26,4 +30,4 @@ namespace AppIntBlockerGUI.Views
             }
         }
     }
-} 
+}

@@ -1,20 +1,28 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Management;
-using System.Threading.Tasks;
+// <copyright file="SystemRestoreService.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Management;
+    using System.Threading.Tasks;
+
     public class SystemRestoreService : ISystemRestoreService
     {
         public class RestorePoint
         {
             public uint SequenceNumber { get; set; }
+
             public string Description { get; set; } = string.Empty;
+
             public DateTime CreationTime { get; set; }
+
             public string RestorePointType { get; set; } = string.Empty;
+
             public string EventType { get; set; } = string.Empty;
         }
 
@@ -74,7 +82,8 @@ namespace AppIntBlockerGUI.Services
                                     // CRITICAL FIX: Validate length before substring
                                     if (creationTimeStr.Length >= 14)
                                     {
-                                        if (DateTime.TryParseExact(creationTimeStr.Substring(0, 14), 
+                                        if (DateTime.TryParseExact(
+                                            creationTimeStr.Substring(0, 14),
                                             "yyyyMMddHHmmss", null, System.Globalization.DateTimeStyles.None, out DateTime creationTime))
                                         {
                                             restorePoint.CreationTime = creationTime;
@@ -104,11 +113,11 @@ namespace AppIntBlockerGUI.Services
 
                                 // Get restore point type
                                 var restoreTypeCode = result["RestorePointType"]?.ToString();
-                                restorePoint.RestorePointType = GetRestorePointTypeDescription(restoreTypeCode);
+                                restorePoint.RestorePointType = this.GetRestorePointTypeDescription(restoreTypeCode);
 
                                 // Get event type
                                 var eventTypeCode = result["EventType"]?.ToString();
-                                restorePoint.EventType = GetEventTypeDescription(eventTypeCode);
+                                restorePoint.EventType = this.GetEventTypeDescription(eventTypeCode);
 
                                 restorePoints.Add(restorePoint);
                             }
@@ -147,7 +156,7 @@ namespace AppIntBlockerGUI.Services
                     inParams["EventType"] = 100; // BEGIN_SYSTEM_CHANGE
 
                     var outParams = classObject.InvokeMethod("CreateRestorePoint", inParams, null);
-                    
+
                     // Check return value (0 = success)
                     var returnValue = Convert.ToInt32(outParams["ReturnValue"]);
                     return returnValue == 0;
@@ -176,7 +185,7 @@ namespace AppIntBlockerGUI.Services
                     inParams["SequenceNumber"] = sequenceNumber;
 
                     var outParams = classObject.InvokeMethod("Restore", inParams, null);
-                    
+
                     // Check return value (0 = success)
                     var returnValue = Convert.ToInt32(outParams["ReturnValue"]);
                     return returnValue == 0;
@@ -213,7 +222,7 @@ namespace AppIntBlockerGUI.Services
             return typeCode switch
             {
                 "0" => "Application Install",
-                "1" => "Application Uninstall", 
+                "1" => "Application Uninstall",
                 "10" => "Device Driver Install",
                 "12" => "Modify Settings",
                 "13" => "Cancelled Operation",
@@ -235,20 +244,20 @@ namespace AppIntBlockerGUI.Services
 
         public async Task<int> GetRestorePointCountAsync()
         {
-            var restorePoints = await GetRestorePointsAsync();
+            var restorePoints = await this.GetRestorePointsAsync();
             return restorePoints.Count;
         }
 
         public async Task<int> GetAppIntBlockerRestorePointCountAsync()
         {
-            var restorePoints = await GetRestorePointsAsync();
+            var restorePoints = await this.GetRestorePointsAsync();
             return restorePoints.Count(rp => rp.Description.Contains("AppIntBlocker", StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<string> GetSystemRestoreStatusAsync()
         {
-            var isEnabled = await IsSystemRestoreEnabledAsync();
+            var isEnabled = await this.IsSystemRestoreEnabledAsync();
             return isEnabled ? "System Restore is enabled" : "System Restore is disabled";
         }
     }
-} 
+}
