@@ -44,7 +44,7 @@ namespace AppIntBlockerGUI.Services
             var powerShell = _powerShellPool.Get();
             try
             {
-                if (!await this.ImportFirewallModules(powerShell, logger).ConfigureAwait(false))
+                if (!await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false))
                 {
                     logger.LogError("Failed to import required PowerShell modules. Aborting block operation.");
                     return false;
@@ -99,8 +99,8 @@ namespace AppIntBlockerGUI.Services
                     }
 
                     var ruleName = $"AppBlocker Rule - {applicationName} - {Path.GetFileName(file)}";
-                    await this.CreateFirewallRule(powerShell, file, ruleName, "Inbound", logger).ConfigureAwait(false);
-                    await this.CreateFirewallRule(powerShell, file, ruleName, "Outbound", logger).ConfigureAwait(false);
+                    await this.CreateFirewallRule(powerShell, file, ruleName, "Inbound", logger, cancellationToken).ConfigureAwait(false);
+                    await this.CreateFirewallRule(powerShell, file, ruleName, "Outbound", logger, cancellationToken).ConfigureAwait(false);
                 }
 
                 logger.LogInfo($"Block operation completed for {applicationName}.");
@@ -112,14 +112,14 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> ImportFirewallModules(PowerShell powerShell, ILoggingService logger)
+        private async Task<bool> ImportFirewallModules(PowerShell powerShell, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Set execution policy to bypass for this session
                 powerShell.Commands.Clear();
                 powerShell.AddScript("Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force");
-                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -132,7 +132,7 @@ namespace AppIntBlockerGUI.Services
                 // Import NetSecurity module for firewall cmdlets
                 powerShell.Commands.Clear();
                 powerShell.AddScript("Import-Module NetSecurity -Force");
-                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -151,19 +151,19 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> CreateFirewallRule(PowerShell powerShell, string filePath, string displayName, string direction, ILoggingService logger)
+        private async Task<bool> CreateFirewallRule(PowerShell powerShell, string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Try PowerShell first
-                if (await this.TryCreateFirewallRuleWithPowerShell(powerShell, filePath, displayName, direction, logger).ConfigureAwait(false))
+                if (await this.TryCreateFirewallRuleWithPowerShell(powerShell, filePath, displayName, direction, logger, cancellationToken).ConfigureAwait(false))
                 {
                     return true;
                 }
 
                 // Fallback to netsh command
                 logger.LogInfo($"PowerShell failed, trying netsh for rule: {displayName}");
-                return await this.CreateFirewallRuleWithNetsh(filePath, displayName, direction, logger).ConfigureAwait(false);
+                return await this.CreateFirewallRuleWithNetsh(filePath, displayName, direction, logger, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -172,7 +172,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> TryCreateFirewallRuleWithPowerShell(PowerShell powerShell, string filePath, string displayName, string direction, ILoggingService logger)
+        private async Task<bool> TryCreateFirewallRuleWithPowerShell(PowerShell powerShell, string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -184,7 +184,7 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("Action", "Block")
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -203,7 +203,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> CreateFirewallRuleWithNetsh(string filePath, string displayName, string direction, ILoggingService logger)
+        private async Task<bool> CreateFirewallRuleWithNetsh(string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -226,10 +226,10 @@ namespace AppIntBlockerGUI.Services
                         return false;
                     }
 
-                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                    var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                    var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    var error = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-                    await process.WaitForExitAsync().ConfigureAwait(false);
+                    await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
                     if (process.ExitCode == 0)
                     {
@@ -249,21 +249,21 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<bool> RemoveExistingRules(string applicationName, ILoggingService logger)
+        public async Task<bool> RemoveExistingRules(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
                 logger.LogInfo($"Removing firewall rules for application: {applicationName}");
 
                 // Try PowerShell first
-                if (await this.TryRemoveRulesWithPowerShell(applicationName, logger).ConfigureAwait(false))
+                if (await this.TryRemoveRulesWithPowerShell(applicationName, logger, cancellationToken).ConfigureAwait(false))
                 {
                     return true;
                 }
 
                 // Fallback to netsh
                 logger.LogInfo("PowerShell removal failed, trying netsh approach...");
-                return await this.RemoveRulesWithNetsh(applicationName, logger).ConfigureAwait(false);
+                return await this.RemoveRulesWithNetsh(applicationName, logger, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -272,20 +272,20 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> TryRemoveRulesWithPowerShell(string applicationName, ILoggingService logger)
+        private async Task<bool> TryRemoveRulesWithPowerShell(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             var powerShell = _powerShellPool.Get();
             try
             {
                 // Import required modules
-                await this.ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
+                await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false);
 
                 // First, get ALL rules and filter manually (wildcard doesn't work reliably)
                 powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-NetFirewallRule")
                     .AddParameter("ErrorAction", "SilentlyContinue");
 
-                var allRules = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                var allRules = await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -325,7 +325,7 @@ namespace AppIntBlockerGUI.Services
                                 .AddParameter("DisplayName", displayName)
                                 .AddParameter("ErrorAction", "Stop");
 
-                            await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                            await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                             if (!powerShell.HadErrors)
                             {
@@ -356,7 +356,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> RemoveRulesWithNetsh(string applicationName, ILoggingService logger)
+        private async Task<bool> RemoveRulesWithNetsh(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -382,8 +382,8 @@ namespace AppIntBlockerGUI.Services
                         return false;
                     }
 
-                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                    await process.WaitForExitAsync().ConfigureAwait(false);
+                    var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
                     // Parse output to find matching rule names
                     var lines = output.Split('\n');
@@ -429,9 +429,9 @@ namespace AppIntBlockerGUI.Services
                                 continue;
                             }
 
-                            var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                            var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-                            await process.WaitForExitAsync().ConfigureAwait(false);
+                            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                            var error = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
                             if (process.ExitCode == 0)
                             {
@@ -460,7 +460,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<List<string>> GetExistingRulesAsync(ILoggingService logger)
+        public async Task<List<string>> GetExistingRulesAsync(ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -470,14 +470,14 @@ namespace AppIntBlockerGUI.Services
                 try
                 {
                     // Import modules first
-                    await this.ImportFirewallModules(powerShell, logger);
+                    await this.ImportFirewallModules(powerShell, logger, cancellationToken);
 
                     // Get ALL firewall rules (more reliable than wildcard)
                     powerShell.Commands.Clear();
                     powerShell.AddCommand("Get-NetFirewallRule")
                         .AddParameter("ErrorAction", "SilentlyContinue");
 
-                    var allRules = await Task.Run(() => powerShell.Invoke());
+                    var allRules = await Task.Run(() => powerShell.Invoke(), cancellationToken);
 
                     if (powerShell.HadErrors)
                     {
@@ -516,11 +516,11 @@ namespace AppIntBlockerGUI.Services
                 logger.LogError("Error getting existing firewall rules with PowerShell, trying netsh fallback", ex);
 
                 // Fallback to netsh method
-                return await this.GetExistingRulesWithNetsh(logger);
+                return await this.GetExistingRulesWithNetsh(logger, cancellationToken);
             }
         }
 
-        private async Task<List<string>> GetExistingRulesWithNetsh(ILoggingService logger)
+        private async Task<List<string>> GetExistingRulesWithNetsh(ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -546,8 +546,8 @@ namespace AppIntBlockerGUI.Services
                         return new List<string>();
                     }
 
-                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                    await process.WaitForExitAsync().ConfigureAwait(false);
+                    var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
                     // Parse output to find AppIntBlocker rules
                     var lines = output.Split('\n');
@@ -574,21 +574,21 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<bool> RemoveSingleRule(string ruleName, ILoggingService logger)
+        public async Task<bool> RemoveSingleRule(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
                 logger.LogInfo($"Removing single firewall rule: {ruleName}");
 
                 // First try PowerShell
-                if (await this.TryRemoveSingleRuleWithPowerShell(ruleName, logger))
+                if (await this.TryRemoveSingleRuleWithPowerShell(ruleName, logger, cancellationToken))
                 {
                     return true;
                 }
 
                 // Fallback to netsh
                 logger.LogInfo("PowerShell failed, trying netsh for single rule removal");
-                return await this.RemoveSingleRuleWithNetsh(ruleName, logger);
+                return await this.RemoveSingleRuleWithNetsh(ruleName, logger, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -597,19 +597,19 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> TryRemoveSingleRuleWithPowerShell(string ruleName, ILoggingService logger)
+        private async Task<bool> TryRemoveSingleRuleWithPowerShell(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             var powerShell = _powerShellPool.Get();
             try
             {
-                await this.ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
+                await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false);
 
                 powerShell.Commands.Clear();
                 powerShell.AddCommand("Remove-NetFirewallRule")
                     .AddParameter("DisplayName", ruleName)
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -628,7 +628,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> RemoveSingleRuleWithNetsh(string ruleName, ILoggingService logger)
+        private async Task<bool> RemoveSingleRuleWithNetsh(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -650,9 +650,9 @@ namespace AppIntBlockerGUI.Services
                         return false;
                     }
 
-                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                    var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-                    await process.WaitForExitAsync().ConfigureAwait(false);
+                    var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    var error = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
                     if (process.ExitCode == 0)
                     {
@@ -673,7 +673,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger)
+        public async Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             var powerShell = _powerShellPool.Get();
             try
@@ -686,7 +686,7 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("RestorePointType", "MODIFY_SETTINGS")
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke());
+                await Task.Run(() => powerShell.Invoke(), cancellationToken);
 
                 if (powerShell.HadErrors)
                 {
@@ -710,7 +710,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<List<AppIntBlockerGUI.Models.FirewallRuleModel>> GetAllFirewallRulesAsync()
+        public async Task<List<AppIntBlockerGUI.Models.FirewallRuleModel>> GetAllFirewallRulesAsync(CancellationToken cancellationToken = default)
         {
             var rules = new List<AppIntBlockerGUI.Models.FirewallRuleModel>();
             var powerShell = _powerShellPool.Get();
@@ -722,7 +722,7 @@ namespace AppIntBlockerGUI.Services
                 powerShell.AddCommand("Get-NetFirewallRule")
                     .AddParameter("ErrorAction", "SilentlyContinue");
 
-                var psResults = await Task.Run(() => powerShell.Invoke());
+                var psResults = await Task.Run(() => powerShell.Invoke(), cancellationToken);
 
                 foreach (var psObject in psResults)
                 {
@@ -765,7 +765,7 @@ namespace AppIntBlockerGUI.Services
             return rules;
         }
 
-        public async Task<bool> DeleteRuleAsync(string ruleName)
+        public async Task<bool> DeleteRuleAsync(string ruleName, CancellationToken cancellationToken = default)
         {
             var powerShell = _powerShellPool.Get();
             try
@@ -775,7 +775,7 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("DisplayName", ruleName)
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -799,7 +799,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<bool> ToggleRuleAsync(string ruleName, bool enable)
+        public async Task<bool> ToggleRuleAsync(string ruleName, bool enable, CancellationToken cancellationToken = default)
         {
             var powerShell = _powerShellPool.Get();
             try
@@ -810,7 +810,7 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("DisplayName", ruleName)
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {

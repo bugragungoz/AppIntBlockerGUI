@@ -10,6 +10,7 @@ namespace AppIntBlockerGUI.ViewModels
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
+    using System.Threading;
     using System.Threading.Tasks;
     using AppIntBlockerGUI.Models;
     using AppIntBlockerGUI.Services;
@@ -21,6 +22,7 @@ namespace AppIntBlockerGUI.ViewModels
         private readonly IFirewallService firewallService;
         private readonly ILoggingService loggingService;
         private readonly IDialogService dialogService;
+        private CancellationTokenSource? _cancellationTokenSource;
 
         [ObservableProperty]
         private ObservableCollection<FirewallRuleModel> allRules = new();
@@ -128,8 +130,19 @@ namespace AppIntBlockerGUI.ViewModels
             await this.RefreshRulesAsync();
         }
 
+        [RelayCommand]
+        private void CancelOperation()
+        {
+            if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
+            {
+                _cancellationTokenSource.Cancel();
+                loggingService.LogWarning("Operation canceled by user.");
+            }
+        }
+
         private async Task RefreshRulesAsync()
         {
+            _cancellationTokenSource = new CancellationTokenSource();
             try
             {
                 this.IsLoading = true;
@@ -141,7 +154,7 @@ namespace AppIntBlockerGUI.ViewModels
                     try
                     {
                         // Get AppIntBlocker rules using FirewallService (already filtered)
-                        var existingRuleNames = await this.firewallService.GetExistingRulesAsync(this.loggingService);
+                        var existingRuleNames = await this.firewallService.GetExistingRulesAsync(this.loggingService, _cancellationTokenSource.Token);
 
                         var rulesList = new List<FirewallRuleModel>();
 
@@ -164,6 +177,11 @@ namespace AppIntBlockerGUI.ViewModels
 
                         return rulesList.OrderBy(r => r.ApplicationName).ThenBy(r => r.RuleName).ToList();
                     }
+                    catch (OperationCanceledException)
+                    {
+                        loggingService.LogWarning("Rule refresh operation was canceled.");
+                        return new List<FirewallRuleModel>(); // Return empty list on cancellation
+                    }
                     catch (Exception ex)
                     {
                         this.loggingService.LogError("Background error refreshing firewall rules", ex);
@@ -177,6 +195,11 @@ namespace AppIntBlockerGUI.ViewModels
                 this.UpdateStatistics();
 
                 this.loggingService.LogInfo($"Successfully loaded {this.AllRules.Count} AppIntBlocker firewall rules");
+            }
+            catch (OperationCanceledException)
+            {
+                loggingService.LogWarning("Rule refresh operation was canceled.");
+                dialogService.ShowMessage("Operation was canceled.", "Canceled");
             }
             catch (Exception ex)
             {
@@ -290,6 +313,7 @@ namespace AppIntBlockerGUI.ViewModels
 
             var ruleToRemove = this.SelectedRule.RuleName; // Store before async operation
 
+            _cancellationTokenSource = new CancellationTokenSource();
             try
             {
                 this.loggingService.LogInfo($"Removing single rule: {ruleToRemove}");
@@ -299,7 +323,12 @@ namespace AppIntBlockerGUI.ViewModels
                 {
                     try
                     {
-                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.loggingService);
+                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.loggingService, _cancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        loggingService.LogWarning("Rule removal was canceled during background execution.");
+                        return false;
                     }
                     catch (Exception ex)
                     {
@@ -319,6 +348,11 @@ namespace AppIntBlockerGUI.ViewModels
                     this.loggingService.LogError($"Failed to remove rule: {ruleToRemove}");
                     this.dialogService.ShowMessage("Failed to remove the selected rule. Check the log for details.", "Error");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                loggingService.LogWarning("Rule removal operation was canceled.");
+                dialogService.ShowMessage("Operation was canceled.", "Canceled");
             }
             catch (Exception ex)
             {
@@ -345,6 +379,7 @@ namespace AppIntBlockerGUI.ViewModels
                 return;
             }
 
+            _cancellationTokenSource = new CancellationTokenSource();
             try
             {
                 this.loggingService.LogInfo("Starting removal of all AppIntBlocker rules...");
@@ -360,9 +395,11 @@ namespace AppIntBlockerGUI.ViewModels
 
                     foreach (var appName in applicationNames)
                     {
+                        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                         try
                         {
-                            var result = await this.firewallService.RemoveExistingRules(appName, this.loggingService);
+                            var result = await this.firewallService.RemoveExistingRules(appName, this.loggingService, _cancellationTokenSource.Token);
                             if (result)
                             {
                                 success++;
@@ -394,6 +431,11 @@ namespace AppIntBlockerGUI.ViewModels
                 }
 
                 await this.RefreshRulesAsync();
+            }
+            catch (OperationCanceledException)
+            {
+                loggingService.LogWarning("Remove all rules operation was canceled.");
+                dialogService.ShowMessage("Operation was canceled.", "Canceled");
             }
             catch (Exception ex)
             {
@@ -493,6 +535,7 @@ namespace AppIntBlockerGUI.ViewModels
         public void Dispose()
         {
             this.loggingService.LogEntryAdded -= this.OnLogEntryAdded;
+            _cancellationTokenSource?.Dispose();
         }
     }
 }
