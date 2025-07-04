@@ -8,8 +8,8 @@
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.Extensions.ObjectPool;
 using System.Management.Automation;
+using Microsoft.Extensions.ObjectPool;
 
 namespace AppIntBlockerGUI.Core
 {
