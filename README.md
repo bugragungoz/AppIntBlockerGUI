@@ -20,6 +20,7 @@
 **Professional Windows Application Firewall Manager with Modern UI**
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
+[![Git](https://img.shields.io/badge/Git-Download-orange.svg?logo=git&logoColor=white)](https://git-scm.com/downloads)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 
@@ -52,9 +53,26 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 ### Prerequisites
 - Windows 10/11
 - .NET 8.0 Runtime
+- .NET 8.0 SDK or Runtime
+- Git (command-line tool)
 - Administrator privileges (the application will request them automatically)
 
 ### Installation
+
+**0. Install Git & .NET 8 SDK (if you don't have them)**
+
+*Install both quickly using Windows Package Manager (winget):*
+
+```powershell
+winget install --id Git.Git -e --source winget && winget install --id Microsoft.DotNet.SDK.8 -e --source winget
+```
+
+*Or install manually:*
+
+- Git: https://git-scm.com/downloads  
+- .NET 8 SDK: https://dotnet.microsoft.com/download
+
+<br/>
 
 **1. Open a Terminal**
 
