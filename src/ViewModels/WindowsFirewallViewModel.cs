@@ -448,7 +448,7 @@ namespace AppIntBlockerGUI.ViewModels
                         var processInfo = new ProcessStartInfo
                         {
                             FileName = "netsh",
-                            Arguments = $"advfirewall firewall set rule name=\"{rule.DisplayName}\" new enable={action}",
+                            Arguments = $"advfirewall firewall set rule name={EscapeNetshArgument(rule.DisplayName)} new enable={action}",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
                             CreateNoWindow = true
@@ -522,7 +522,7 @@ namespace AppIntBlockerGUI.ViewModels
                         var processInfo = new ProcessStartInfo
                         {
                             FileName = "netsh",
-                            Arguments = $"advfirewall firewall delete rule name=\"{rule.DisplayName}\"",
+                            Arguments = $"advfirewall firewall delete rule name={EscapeNetshArgument(rule.DisplayName)}",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
                             CreateNoWindow = true
@@ -564,6 +564,19 @@ namespace AppIntBlockerGUI.ViewModels
                 StatusMessage = "Error deleting rule";
                 _dialogService.ShowMessage("An error occurred while deleting the rule. Check the log for details.", "Error");
             }
+        }
+
+        /// <summary>
+        /// Securely escapes arguments for netsh commands to prevent command injection.
+        /// AI-generated code: This method implements proper escaping to prevent security vulnerabilities.
+        /// </summary>
+        private static string EscapeNetshArgument(string argument)
+        {
+            if (string.IsNullOrEmpty(argument))
+                return "\"\"";
+                
+            // Escape quotes by doubling them and wrap in quotes
+            return "\"" + argument.Replace("\"", "\"\"") + "\"";
         }
     }
 } 

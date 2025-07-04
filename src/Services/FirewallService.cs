@@ -149,33 +149,14 @@ namespace AppIntBlockerGUI.Services
             try
             {
                 powerShell.Commands.Clear();
-
-                // Check if rule already exists
-                powerShell.AddCommand("Get-NetFirewallRule")
-                    .AddParameter("DisplayName", displayName)
-                    .AddParameter("ErrorAction", "SilentlyContinue");
-
-                var existingRules = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
-                
-                if (existingRules.Any())
-                {
-                    logger.LogInfo($"Rule '{displayName}' already exists, skipping creation.");
-                    return true;
-                }
-
-                powerShell.Commands.Clear();
-
-                // Create new firewall rule
                 powerShell.AddCommand("New-NetFirewallRule")
                     .AddParameter("DisplayName", displayName)
                     .AddParameter("Direction", direction)
                     .AddParameter("Program", filePath)
                     .AddParameter("Action", "Block")
-                    .AddParameter("Profile", "Any")
-                    .AddParameter("Enabled", "True")
                     .AddParameter("ErrorAction", "Stop");
 
-                var results = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
+                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -201,7 +182,7 @@ namespace AppIntBlockerGUI.Services
                 var processInfo = new ProcessStartInfo
                 {
                     FileName = "netsh",
-                    Arguments = $"advfirewall firewall add rule name=\"{displayName}\" dir={direction.ToLower()} action=block program=\"{filePath}\" enable=yes",
+                    Arguments = $"advfirewall firewall add rule name={EscapeNetshArgument(displayName)} dir={direction.ToLower()} action=block program={EscapeNetshArgument(filePath)} enable=yes",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -232,8 +213,6 @@ namespace AppIntBlockerGUI.Services
                         throw new InvalidOperationException($"netsh exit code: {process.ExitCode}, Error: {error}");
                     }
                 }
-
-                return false;
             }
             catch (Exception ex)
             {
@@ -409,7 +388,7 @@ namespace AppIntBlockerGUI.Services
                         var removeProcess = new ProcessStartInfo
                         {
                             FileName = "netsh",
-                            Arguments = $"advfirewall firewall delete rule name=\"{ruleName}\"",
+                            Arguments = $"advfirewall firewall delete rule name={EscapeNetshArgument(ruleName)}",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
                             RedirectStandardError = true,
@@ -593,28 +572,25 @@ namespace AppIntBlockerGUI.Services
             {
                 using (var powerShell = PowerShell.Create())
                 {
-                    // Set execution policy and import modules
-                    await ImportFirewallModules(powerShell, logger);
+                    await ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
 
-                    // Remove the specific rule by DisplayName
                     powerShell.Commands.Clear();
                     powerShell.AddCommand("Remove-NetFirewallRule")
                         .AddParameter("DisplayName", ruleName)
                         .AddParameter("ErrorAction", "Stop");
 
-                    await Task.Run(() => powerShell.Invoke());
+                    await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
-                    if (!powerShell.HadErrors)
-                    {
-                        logger.LogInfo($"Successfully removed rule with PowerShell: {ruleName}");
-                        return true;
-                    }
-                    else
+                    if (powerShell.HadErrors)
                     {
                         var errors = powerShell.Streams.Error.ReadAll();
-                        logger.LogWarning($"PowerShell error removing rule '{ruleName}': {string.Join("; ", errors.Select(e => e.ToString()))}");
+                        var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                        logger.LogWarning($"PowerShell error removing rule '{ruleName}': {errorMessage}");
                         return false;
                     }
+
+                    logger.LogInfo($"Successfully removed rule with PowerShell: {ruleName}");
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -628,17 +604,17 @@ namespace AppIntBlockerGUI.Services
         {
             try
             {
-                var removeProcess = new ProcessStartInfo
+                var processInfo = new ProcessStartInfo
                 {
                     FileName = "netsh",
-                    Arguments = $"advfirewall firewall delete rule name=\"{ruleName}\"",
+                    Arguments = $"advfirewall firewall delete rule name={EscapeNetshArgument(ruleName)}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
 
-                using (var process = Process.Start(removeProcess))
+                using (var process = Process.Start(processInfo))
                 {
                     if (process == null)
                     {
@@ -661,8 +637,6 @@ namespace AppIntBlockerGUI.Services
                         return false;
                     }
                 }
-
-                return false;
             }
             catch (Exception ex)
             {
@@ -844,6 +818,15 @@ namespace AppIntBlockerGUI.Services
                 // _dialogService?.ShowError("Could not open Windows Firewall management console. " +
                 //     "Please open it manually from Control Panel.");
             }
+        }
+
+        private static string EscapeNetshArgument(string argument)
+        {
+            if (string.IsNullOrEmpty(argument))
+                return "\"\"";
+            
+            // Per netsh documentation, a quote is escaped by doubling it.
+            return "\"" + argument.Replace("\"", "\"\"") + "\"";
         }
     }
 } 

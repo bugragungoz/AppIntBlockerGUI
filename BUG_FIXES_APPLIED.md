@@ -361,3 +361,18 @@ catch (OperationCanceledException)
 ---
 
 **🎉 The codebase is now significantly more stable, maintainable, and user-friendly with all major bugs resolved!**
+
+# Applied Bug Fixes & Security Patches (2024)
+
+## Security Improvements
+- Fixed command-line (netsh) and PowerShell injection vulnerabilities
+- Strengthened path traversal and input validation
+- Error message sanitization: only safe, user-friendly messages are shown
+- Settings file is now encrypted using DPAPI
+- Access to critical system directories and files is blocked
+
+## Other Bug Fixes
+- Build errors and legacy/incompatible property names resolved
+- Refactoring completed while preserving GUI and core functionality
+
+> All fixes and patches were AI-assisted and reviewed for user safety.

@@ -119,7 +119,7 @@ namespace AppIntBlockerGUI.ViewModels
                 var buildDate = File.GetCreationTime(assembly.Location);
                 BuildDate = buildDate.ToString("yyyy-MM-dd");
 
-                SettingsLocation = _settingsService.SettingsFilePath;
+                SettingsLocation = _settingsService.GetSettingsFilePath();
 
                 // Set default backup location
                 var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);

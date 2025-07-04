@@ -11,6 +11,7 @@ using System.Security.Principal;
 using System.Diagnostics;
 using AppIntBlockerGUI.Views;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace AppIntBlockerGUI;
 
@@ -26,12 +27,7 @@ public partial class App : Application
     public App()
     {
         // Global exception handlers
-        this.DispatcherUnhandledException += (s, e) =>
-        {
-            MessageBox.Show($"Unhandled Exception: {e.Exception.Message}\n\nStack Trace:\n{e.Exception.StackTrace}",
-                "Unhandled Exception", MessageBoxButton.OK, MessageBoxImage.Error);
-            e.Handled = true;
-        };
+        this.DispatcherUnhandledException += Application_DispatcherUnhandledException;
 
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
         {
@@ -160,11 +156,11 @@ public partial class App : Application
         });
     }
 
-    private bool IsRunAsAdministrator()
+    public static bool IsRunAsAdministrator()
     {
-        using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+        using (var identity = WindowsIdentity.GetCurrent())
         {
-            WindowsPrincipal principal = new WindowsPrincipal(identity);
+            var principal = new WindowsPrincipal(identity);
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
     }
@@ -235,6 +231,54 @@ public partial class App : Application
     private void TextBox_LostFocus(object sender, RoutedEventArgs e)
     {
         // This can be used if additional logic is needed on lost focus
+    }
+
+    /// <summary>
+    /// Sanitizes error messages to prevent sensitive information disclosure.
+    /// AI-generated code: Enhanced error handling for security.
+    /// </summary>
+    private static string SanitizeErrorMessage(Exception exception)
+    {
+        // Don't expose detailed error information that could help attackers
+        var exceptionType = exception.GetType().Name;
+        
+        // Map specific exceptions to safe, user-friendly messages
+        return exceptionType switch
+        {
+            "UnauthorizedAccessException" => "Access was denied. Please check your permissions.",
+            "FileNotFoundException" => "A required file could not be found.",
+            "DirectoryNotFoundException" => "A required directory could not be found.",
+            "SecurityException" => "A security error occurred. Please contact support.",
+            "InvalidOperationException" => "An invalid operation was attempted.",
+            "ArgumentException" => "Invalid input was provided.",
+            "Win32Exception" => "A system operation failed. Please try again.",
+            "SqlException" => "A database error occurred. Please try again later.",
+            "HttpRequestException" => "A network error occurred. Please check your connection.",
+            "TimeoutException" => "The operation timed out. Please try again.",
+            _ => "An unexpected error occurred. Please restart the application and try again."
+        };
+    }
+
+    private void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        var exceptionType = e.Exception.GetType().Name;
+        
+        // Sanitize the error message to prevent information disclosure
+        var userFriendlyMessage = SanitizeErrorMessage(e.Exception);
+
+        // Log the full exception details for debugging purposes (but not to user)
+        // In production, this should go to a secure logging system
+        Debug.WriteLine($"[FATAL] Unhandled Exception: {e.Exception}");
+        
+        // Only show sanitized, user-friendly message to the user
+        MessageBox.Show(
+            $"{userFriendlyMessage}\n\nError ID: {Guid.NewGuid():N}\n\nIf this problem persists, please contact support with the Error ID.",
+            "Application Error", 
+            MessageBoxButton.OK, 
+            MessageBoxImage.Error);
+
+        e.Handled = true;
+        Current.Shutdown();
     }
 }
 
