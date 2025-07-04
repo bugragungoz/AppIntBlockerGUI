@@ -20,6 +20,7 @@ using AppIntBlockerGUI.Core;
 using Microsoft.Extensions.ObjectPool;
 using System.Management.Automation;
 using System.Runtime.Versioning;
+using AppIntBlockerGUI.Models;
 
 namespace AppIntBlockerGUI;
 
@@ -68,20 +69,20 @@ public partial class App : Application
         // Services
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<ILoggingService, LoggingService>();
-        services.AddSingleton<IFirewallService, FirewallService>();
-        services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<ISystemRestoreService, SystemRestoreService>();
         services.AddSingleton<IDialogService, DialogService>();
-
-        // Add PowerShell Object Pool
-        services.AddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
-        services.AddSingleton<IPooledObjectPolicy<PowerShell>, PowerShellPooledObjectPolicy>();
-        services.AddSingleton(serviceProvider =>
+        services.AddSingleton<ISystemRestoreService, SystemRestoreService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<ObjectPool<PowerShell>>(serviceProvider =>
         {
-            var provider = serviceProvider.GetRequiredService<ObjectPoolProvider>();
-            var policy = serviceProvider.GetRequiredService<IPooledObjectPolicy<PowerShell>>();
-            return provider.Create(policy);
+            var policy = new PowerShellPooledObjectPolicy();
+            return new DefaultObjectPool<PowerShell>(policy);
         });
+
+        // Register the PowerShell wrapper and the factory
+        services.AddTransient<IPowerShellWrapper, PowerShellWrapper>();
+        services.AddSingleton<Func<IPowerShellWrapper>>(serviceProvider => () => serviceProvider.GetRequiredService<IPowerShellWrapper>());
+
+        services.AddSingleton<IFirewallService, FirewallService>();
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();

@@ -17,18 +17,19 @@ namespace AppIntBlockerGUI.Services
     using System.Text.RegularExpressions;
     using Microsoft.Extensions.ObjectPool;
     using System.Runtime.Versioning;
+    using AppIntBlockerGUI.Core;
 
     [SupportedOSPlatform("windows")]
     public class FirewallService : IFirewallService
     {
         private const string RuleNamePrefix = "AppBlocker Rule - ";
         private readonly ILoggingService _loggingService;
-        private readonly ObjectPool<PowerShell> _powerShellPool;
+        private readonly Func<IPowerShellWrapper> _powerShellWrapperFactory;
 
-        public FirewallService(ILoggingService loggingService, ObjectPool<PowerShell> powerShellPool)
+        public FirewallService(ILoggingService loggingService, Func<IPowerShellWrapper> powerShellWrapperFactory)
         {
             _loggingService = loggingService;
-            _powerShellPool = powerShellPool;
+            _powerShellWrapperFactory = powerShellWrapperFactory;
         }
 
         public async Task<bool> BlockApplicationFiles(
@@ -41,7 +42,7 @@ namespace AppIntBlockerGUI.Services
             ILoggingService logger,
             CancellationToken cancellationToken)
         {
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
             try
             {
                 if (!await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false))
@@ -108,40 +109,38 @@ namespace AppIntBlockerGUI.Services
             }
             finally
             {
-                _powerShellPool.Return(powerShell);
+                // No need to return the powerShell object as it's managed by the factory
             }
         }
 
-        private async Task<bool> ImportFirewallModules(PowerShell powerShell, ILoggingService logger, CancellationToken cancellationToken = default)
+        private async Task<bool> ImportFirewallModules(IPowerShellWrapper powerShell, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
                 // Set execution policy to bypass for this session
-                powerShell.Commands.Clear();
                 powerShell.AddScript("Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force");
-                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    logger.LogWarning($"Warning setting execution policy: {string.Join("; ", errors.Select(e => e.ToString()))}");
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    logger.LogWarning($"Warning setting execution policy: {string.Join("; ", errors)}");
                 }
 
-                powerShell.Streams.Error.Clear();
+                powerShell.Errors.Clear();
 
                 // Import NetSecurity module for firewall cmdlets
-                powerShell.Commands.Clear();
                 powerShell.AddScript("Import-Module NetSecurity -Force");
-                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    logger.LogError($"CRITICAL: NetSecurity module import failed. Firewall operations cannot proceed: {string.Join("; ", errors.Select(e => e.ToString()))}");
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    logger.LogError($"CRITICAL: NetSecurity module import failed. Firewall operations cannot proceed: {string.Join("; ", errors)}");
                     return false;  // Signal failure clearly
                 }
 
-                powerShell.Streams.Error.Clear();
+                powerShell.Errors.Clear();
                 return true;  // Success
             }
             catch (Exception ex)
@@ -151,7 +150,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> CreateFirewallRule(PowerShell powerShell, string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
+        private async Task<bool> CreateFirewallRule(IPowerShellWrapper powerShell, string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -172,11 +171,10 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        private async Task<bool> TryCreateFirewallRuleWithPowerShell(PowerShell powerShell, string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
+        private async Task<bool> TryCreateFirewallRuleWithPowerShell(IPowerShellWrapper powerShell, string filePath, string displayName, string direction, ILoggingService logger, CancellationToken cancellationToken = default)
         {
             try
             {
-                powerShell.Commands.Clear();
                 powerShell.AddCommand("New-NetFirewallRule")
                     .AddParameter("DisplayName", displayName)
                     .AddParameter("Direction", direction)
@@ -184,12 +182,12 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("Action", "Block")
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    var errorMessage = string.Join("; ", errors);
                     throw new Exception($"PowerShell errors: {errorMessage}");
                 }
 
@@ -274,23 +272,22 @@ namespace AppIntBlockerGUI.Services
 
         private async Task<bool> TryRemoveRulesWithPowerShell(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
             try
             {
                 // Import required modules
                 await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false);
 
                 // First, get ALL rules and filter manually (wildcard doesn't work reliably)
-                powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-NetFirewallRule")
                     .AddParameter("ErrorAction", "SilentlyContinue");
 
-                var allRules = await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                var allRules = await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    logger.LogWarning($"PowerShell errors getting rules: {string.Join("; ", errors.Select(e => e.ToString()))}");
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    logger.LogWarning($"PowerShell errors getting rules: {string.Join("; ", errors)}");
                     return false;
                 }
 
@@ -320,12 +317,11 @@ namespace AppIntBlockerGUI.Services
 
                         if (!string.IsNullOrEmpty(displayName))
                         {
-                            powerShell.Commands.Clear();
                             powerShell.AddCommand("Remove-NetFirewallRule")
                                 .AddParameter("DisplayName", displayName)
                                 .AddParameter("ErrorAction", "Stop");
 
-                            await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                            await powerShell.InvokeAsync();
 
                             if (!powerShell.HadErrors)
                             {
@@ -334,11 +330,11 @@ namespace AppIntBlockerGUI.Services
                             }
                             else
                             {
-                                var errors = powerShell.Streams.Error.ReadAll();
-                                logger.LogWarning($"PowerShell error removing rule '{displayName}': {string.Join("; ", errors.Select(e => e.ToString()))}");
+                                var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                                logger.LogWarning($"PowerShell error removing rule '{displayName}': {string.Join("; ", errors)}");
                             }
 
-                            powerShell.Streams.Error.Clear();
+                            powerShell.Errors.Clear();
                         }
                     }
                     catch (Exception ex)
@@ -352,7 +348,7 @@ namespace AppIntBlockerGUI.Services
             }
             finally
             {
-                _powerShellPool.Return(powerShell);
+                // No need to return the powerShell object as it's managed by the factory
             }
         }
 
@@ -460,118 +456,62 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public async Task<List<string>> GetExistingRulesAsync(ILoggingService logger, CancellationToken cancellationToken = default)
+        public async Task<List<string>> GetExistingRulesAsync(ILoggingService loggingService, CancellationToken cancellationToken = default)
         {
-            try
+            var ruleNames = new List<string>();
+            var script = "Get-NetFirewallRule -DisplayName \"AppBlocker Rule - *\" | Select-Object DisplayName";
+
+            using (var ps = _powerShellWrapperFactory())
             {
-                logger.LogInfo("Getting all firewall rules and filtering for AppIntBlocker...");
+                ps.AddScript(script);
 
-                var powerShell = _powerShellPool.Get();
-                try
+                loggingService.LogInfo("Executing PowerShell to get existing firewall rules...");
+
+                var results = await ps.InvokeAsync();
+
+                if (ps.HadErrors)
                 {
-                    // Import modules first
-                    await this.ImportFirewallModules(powerShell, logger, cancellationToken);
-
-                    // Get ALL firewall rules (more reliable than wildcard)
-                    powerShell.Commands.Clear();
-                    powerShell.AddCommand("Get-NetFirewallRule")
-                        .AddParameter("ErrorAction", "SilentlyContinue");
-
-                    var allRules = await Task.Run(() => powerShell.Invoke(), cancellationToken);
-
-                    if (powerShell.HadErrors)
+                    foreach (var error in ps.Errors)
                     {
-                        var errors = powerShell.Streams.Error.ReadAll();
-                        logger.LogWarning($"PowerShell warnings getting rules: {string.Join("; ", errors.Select(e => e.ToString()))}");
+                        loggingService.LogError($"PowerShell error: {error}", error.Exception);
                     }
-
-                    // Filter for AppIntBlocker rules manually (more reliable)
-                    var appBlockerRules = new List<string>();
-                    foreach (var rule in allRules)
-                    {
-                        try
-                        {
-                            var displayName = rule.Properties["DisplayName"]?.Value?.ToString();
-                            if (!string.IsNullOrEmpty(displayName) && displayName.StartsWith(RuleNamePrefix))
-                            {
-                                appBlockerRules.Add(displayName);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogWarning($"Error processing individual rule: {ex.Message}");
-                        }
-                    }
-
-                    logger.LogInfo($"Found {appBlockerRules.Count} AppIntBlocker rules out of {allRules.Count} total rules");
-                    return appBlockerRules;
                 }
-                finally
+
+                foreach (var result in results)
                 {
-                    _powerShellPool.Return(powerShell);
+                    if (result != null && result.Properties["DisplayName"] != null)
+                    {
+                        ruleNames.Add(result.Properties["DisplayName"].Value.ToString());
+                    }
                 }
             }
-            catch (Exception ex)
-            {
-                logger.LogError("Error getting existing firewall rules with PowerShell, trying netsh fallback", ex);
 
-                // Fallback to netsh method
-                return await this.GetExistingRulesWithNetsh(logger, cancellationToken);
-            }
+            loggingService.LogInfo($"Found {ruleNames.Count} existing AppIntBlocker rules.");
+            return ruleNames;
         }
 
-        private async Task<List<string>> GetExistingRulesWithNetsh(ILoggingService logger, CancellationToken cancellationToken = default)
+        private async Task<bool> RunPowerShellScript(string script, ILoggingService loggingService, CancellationToken cancellationToken)
         {
-            try
+            using (var ps = _powerShellWrapperFactory())
             {
-                logger.LogInfo("Using netsh to get firewall rules...");
+                ps.AddScript(script);
 
-                var listProcess = new ProcessStartInfo
+                loggingService.LogInfo($"Executing PowerShell script... Script: {script.Substring(0, Math.Min(script.Length, 100))}");
+
+                await ps.InvokeAsync();
+
+                if (ps.HadErrors)
                 {
-                    FileName = "netsh",
-                    Arguments = "advfirewall firewall show rule name=all",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                var appBlockerRules = new List<string>();
-
-                using (var process = Process.Start(listProcess))
-                {
-                    if (process == null)
+                    foreach (var error in ps.Errors)
                     {
-                        logger.LogError("Failed to start netsh process for getting existing rules");
-                        return new List<string>();
+                        loggingService.LogError($"PowerShell script error: {error}", error.Exception);
                     }
 
-                    var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-                    await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-                    // Parse output to find AppIntBlocker rules
-                    var lines = output.Split('\n');
-                    foreach (var line in lines)
-                    {
-                        if (line.StartsWith("Rule Name:"))
-                        {
-                            var ruleName = line.Substring("Rule Name:".Length).Trim();
-                            if (!string.IsNullOrEmpty(ruleName) && ruleName.StartsWith(RuleNamePrefix))
-                            {
-                                appBlockerRules.Add(ruleName);
-                            }
-                        }
-                    }
+                    return false;
                 }
+            }
 
-                logger.LogInfo($"Found {appBlockerRules.Count} AppIntBlocker rules using netsh");
-                return appBlockerRules;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("netsh fallback also failed", ex);
-                return new List<string>();
-            }
+            return true;
         }
 
         public async Task<bool> RemoveSingleRule(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default)
@@ -599,22 +539,21 @@ namespace AppIntBlockerGUI.Services
 
         private async Task<bool> TryRemoveSingleRuleWithPowerShell(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
             try
             {
                 await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false);
 
-                powerShell.Commands.Clear();
                 powerShell.AddCommand("Remove-NetFirewallRule")
                     .AddParameter("DisplayName", ruleName)
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    var errorMessage = string.Join("; ", errors);
                     logger.LogWarning($"PowerShell error removing rule '{ruleName}': {errorMessage}");
                     return false;
                 }
@@ -624,7 +563,7 @@ namespace AppIntBlockerGUI.Services
             }
             finally
             {
-                _powerShellPool.Return(powerShell);
+                // No need to return the powerShell object as it's managed by the factory
             }
         }
 
@@ -675,23 +614,22 @@ namespace AppIntBlockerGUI.Services
 
         public async Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger, CancellationToken cancellationToken = default)
         {
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
             try
             {
                 logger.LogInfo($"Creating system restore point: {description}");
 
-                powerShell.Commands.Clear();
                 powerShell.AddCommand("Checkpoint-Computer")
                     .AddParameter("Description", description)
                     .AddParameter("RestorePointType", "MODIFY_SETTINGS")
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke(), cancellationToken);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    var errorMessage = string.Join("; ", errors);
                     logger.LogError($"PowerShell error creating restore point: {errorMessage}");
                     return false;
                 }
@@ -704,25 +642,20 @@ namespace AppIntBlockerGUI.Services
                 logger.LogError("Error creating system restore point", ex);
                 return false;
             }
-            finally
-            {
-                _powerShellPool.Return(powerShell);
-            }
         }
 
         public async Task<List<AppIntBlockerGUI.Models.FirewallRuleModel>> GetAllFirewallRulesAsync(CancellationToken cancellationToken = default)
         {
             var rules = new List<AppIntBlockerGUI.Models.FirewallRuleModel>();
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
 
             try
             {
                 // Get all firewall rules
-                powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-NetFirewallRule")
                     .AddParameter("ErrorAction", "SilentlyContinue");
 
-                var psResults = await Task.Run(() => powerShell.Invoke(), cancellationToken);
+                var psResults = await powerShell.InvokeAsync();
 
                 foreach (var psObject in psResults)
                 {
@@ -757,30 +690,25 @@ namespace AppIntBlockerGUI.Services
 
                 // Return empty list on error
             }
-            finally
-            {
-                _powerShellPool.Return(powerShell);
-            }
 
             return rules;
         }
 
         public async Task<bool> DeleteRuleAsync(string ruleName, CancellationToken cancellationToken = default)
         {
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
             try
             {
-                powerShell.Commands.Clear();
                 powerShell.AddCommand("Remove-NetFirewallRule")
                     .AddParameter("DisplayName", ruleName)
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    var errorMessage = string.Join("; ", errors);
                     System.Diagnostics.Debug.WriteLine($"PowerShell errors deleting rule '{ruleName}': {errorMessage}");
                     return false;
                 }
@@ -793,29 +721,24 @@ namespace AppIntBlockerGUI.Services
                 System.Diagnostics.Debug.WriteLine($"Exception deleting rule '{ruleName}': {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _powerShellPool.Return(powerShell);
-            }
         }
 
         public async Task<bool> ToggleRuleAsync(string ruleName, bool enable, CancellationToken cancellationToken = default)
         {
-            var powerShell = _powerShellPool.Get();
+            var powerShell = _powerShellWrapperFactory();
             try
             {
-                powerShell.Commands.Clear();
                 var action = enable ? "Enable" : "Disable";
                 powerShell.AddCommand($"{action}-NetFirewallRule")
                     .AddParameter("DisplayName", ruleName)
                     .AddParameter("ErrorAction", "Stop");
 
-                await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+                await powerShell.InvokeAsync();
 
                 if (powerShell.HadErrors)
                 {
-                    var errors = powerShell.Streams.Error.ReadAll();
-                    var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                    var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
+                    var errorMessage = string.Join("; ", errors);
                     System.Diagnostics.Debug.WriteLine($"PowerShell errors toggling rule '{ruleName}' to {(enable ? "enabled" : "disabled")}: {errorMessage}");
                     return false;
                 }
@@ -827,10 +750,6 @@ namespace AppIntBlockerGUI.Services
                 // FIXED: Log the exception instead of silent fail
                 System.Diagnostics.Debug.WriteLine($"Exception toggling rule '{ruleName}' to {(enable ? "enabled" : "disabled")}: {ex.Message}");
                 return false;
-            }
-            finally
-            {
-                _powerShellPool.Return(powerShell);
             }
         }
 
