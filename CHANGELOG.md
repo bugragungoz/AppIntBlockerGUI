@@ -82,7 +82,7 @@ This version was developed with the assistance of:
 - [ ] Advanced reporting and analytics
 - [ ] API for third-party integrations
 
-## [2024-SECURITY-PATCH] - 2024-xx-xx
+## [2025-SECURITY-PATCH] - 2025-xx-xx
 ### Added
 - AI-assisted security patches: command injection, PowerShell injection, path traversal, input validation, error message sanitization
 - Settings file encryption (DPAPI)
