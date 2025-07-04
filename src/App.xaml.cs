@@ -16,6 +16,9 @@ using AppIntBlockerGUI.Services;
 using AppIntBlockerGUI.ViewModels;
 using AppIntBlockerGUI.Views;
 using Microsoft.Extensions.DependencyInjection;
+using AppIntBlockerGUI.Core;
+using Microsoft.Extensions.ObjectPool;
+using System.Management.Automation;
 
 namespace AppIntBlockerGUI;
 
@@ -56,6 +59,16 @@ public partial class App : Application
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<ISystemRestoreService, SystemRestoreService>();
         services.AddSingleton<IDialogService, DialogService>();
+
+        // Add PowerShell Object Pool
+        services.AddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
+        services.AddSingleton<IPooledObjectPolicy<PowerShell>, PowerShellPooledObjectPolicy>();
+        services.AddSingleton(serviceProvider =>
+        {
+            var provider = serviceProvider.GetRequiredService<ObjectPoolProvider>();
+            var policy = serviceProvider.GetRequiredService<IPooledObjectPolicy<PowerShell>>();
+            return provider.Create(policy);
+        });
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();

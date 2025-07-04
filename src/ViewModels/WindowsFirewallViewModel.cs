@@ -64,11 +64,11 @@ namespace AppIntBlockerGUI.ViewModels
         [ObservableProperty]
         private DateTime lastRefreshTime = DateTime.Now;
 
-        public WindowsFirewallViewModel()
+        public WindowsFirewallViewModel(IFirewallService firewallService, IDialogService dialogService, ILoggingService loggingService)
         {
-            this.firewallService = new FirewallService();
-            this.dialogService = new DialogService();
-            this.loggingService = new LoggingService();
+            this.firewallService = firewallService;
+            this.dialogService = dialogService;
+            this.loggingService = loggingService;
 
             // Initialize filtered view
             this.FilteredRules = CollectionViewSource.GetDefaultView(this.AllRules);
