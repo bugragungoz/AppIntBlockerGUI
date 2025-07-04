@@ -1,6 +1,6 @@
 # AppIntBlockerGUI Security Analysis Report
 
-> **NOTE:** All critical vulnerabilities and recommendations in this report were addressed and fixed in 2024 with AI assistance. For details, see the README and BUG_FIXES_APPLIED files.
+> **NOTE:** All critical vulnerabilities and recommendations in this report were addressed and fixed in 2025 with AI assistance. For details, see the README and BUG_FIXES_APPLIED files.
 
 ## Executive Summary
 

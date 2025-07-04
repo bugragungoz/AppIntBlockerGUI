@@ -362,7 +362,7 @@ catch (OperationCanceledException)
 
 **🎉 The codebase is now significantly more stable, maintainable, and user-friendly with all major bugs resolved!**
 
-# Applied Bug Fixes & Security Patches (2024)
+# Applied Bug Fixes & Security Patches (2025)
 
 ## Security Improvements
 - Fixed command-line (netsh) and PowerShell injection vulnerabilities
