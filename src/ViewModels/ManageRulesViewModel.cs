@@ -22,7 +22,7 @@ namespace AppIntBlockerGUI.ViewModels
         private readonly IFirewallService firewallService;
         private readonly ILoggingService loggingService;
         private readonly IDialogService dialogService;
-        private CancellationTokenSource? _cancellationTokenSource;
+        private CancellationTokenSource cancellationTokenSource = new();
 
         [ObservableProperty]
         private ObservableCollection<FirewallRuleModel> allRules = new();
@@ -136,69 +136,35 @@ namespace AppIntBlockerGUI.ViewModels
         [RelayCommand]
         private void CancelOperation()
         {
-            if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
+            if (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
             {
-                _cancellationTokenSource.Cancel();
+                cancellationTokenSource.Cancel();
                 loggingService.LogWarning("Operation canceled by user.");
             }
         }
 
         private async Task RefreshRulesAsync()
         {
-            _cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource = new CancellationTokenSource();
+            await this.LoadRulesAsync();
+        }
+
+        private async Task LoadRulesAsync()
+        {
+            this.IsLoading = true;
+            this.AllRules.Clear();
+            this.loggingService.LogInfo("Loading firewall rules...");
+
             try
             {
-                this.LoadingStatusText = "Refreshing firewall rules...";
-                this.IsLoading = true;
-                this.loggingService.LogInfo("Refreshing AppIntBlocker firewall rules...");
-
-                // Run the rules gathering in background to prevent UI blocking
-                var rules = await Task.Run(async () =>
+                var loadedRules = await this.firewallService.GetAllFirewallRulesAsync(cancellationTokenSource.Token);
+                foreach (var rule in loadedRules.OrderBy(r => r.DisplayName))
                 {
-                    try
-                    {
-                        // Get AppIntBlocker rules using FirewallService (already filtered)
-                        var existingRuleNames = await this.firewallService.GetExistingRulesAsync(this.loggingService, _cancellationTokenSource.Token);
+                    this.AllRules.Add(rule);
+                }
 
-                        var rulesList = new List<FirewallRuleModel>();
-
-                        foreach (var ruleName in existingRuleNames)
-                        {
-                            try
-                            {
-                                // Parse rule information from name
-                                var rule = this.ParseRuleFromName(ruleName);
-                                if (rule != null)
-                                {
-                                    rulesList.Add(rule);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                this.loggingService.LogError($"Error parsing rule: {ruleName}", ex);
-                            }
-                        }
-
-                        return rulesList.OrderBy(r => r.ApplicationName).ThenBy(r => r.RuleName).ToList();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        loggingService.LogWarning("Rule refresh operation was canceled.");
-                        return new List<FirewallRuleModel>(); // Return empty list on cancellation
-                    }
-                    catch (Exception ex)
-                    {
-                        this.loggingService.LogError("Background error refreshing firewall rules", ex);
-                        return new List<FirewallRuleModel>();
-                    }
-                });
-
-                // Update UI on main thread
-                this.AllRules = new ObservableCollection<FirewallRuleModel>(rules);
-                this.FilterRules();
-                this.UpdateStatistics();
-
-                this.loggingService.LogInfo($"Successfully loaded {this.AllRules.Count} AppIntBlocker firewall rules");
+                this.loggingService.LogInfo($"Found {this.AllRules.Count} firewall rules.");
             }
             catch (OperationCanceledException)
             {
@@ -317,7 +283,7 @@ namespace AppIntBlockerGUI.ViewModels
 
             var ruleToRemove = this.SelectedRule.RuleName; // Store before async operation
 
-            _cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource = new CancellationTokenSource();
             try
             {
                 this.LoadingStatusText = $"Removing rule: {ruleToRemove}";
@@ -329,7 +295,7 @@ namespace AppIntBlockerGUI.ViewModels
                 {
                     try
                     {
-                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.loggingService, _cancellationTokenSource.Token);
+                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.loggingService, cancellationTokenSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -389,7 +355,7 @@ namespace AppIntBlockerGUI.ViewModels
                 return;
             }
 
-            _cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource = new CancellationTokenSource();
             try
             {
                 this.LoadingStatusText = "Removing all AppIntBlocker rules...";
@@ -407,11 +373,11 @@ namespace AppIntBlockerGUI.ViewModels
 
                     foreach (var appName in applicationNames)
                     {
-                        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                         try
                         {
-                            var result = await this.firewallService.RemoveExistingRules(appName, this.loggingService, _cancellationTokenSource.Token);
+                            var result = await this.firewallService.RemoveExistingRules(appName, this.loggingService, cancellationTokenSource.Token);
                             if (result)
                             {
                                 success++;
@@ -550,8 +516,16 @@ namespace AppIntBlockerGUI.ViewModels
 
         public void Dispose()
         {
-            this.loggingService.LogEntryAdded -= this.OnLogEntryAdded;
-            _cancellationTokenSource?.Dispose();
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.cancellationTokenSource.Dispose();
+            }
         }
     }
 }

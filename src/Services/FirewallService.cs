@@ -11,25 +11,24 @@ namespace AppIntBlockerGUI.Services
     using System.IO;
     using System.Linq;
     using System.Management.Automation;
+    using System.Runtime.Versioning;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using AppIntBlockerGUI.Services;
-    using System.Text.RegularExpressions;
-    using Microsoft.Extensions.ObjectPool;
-    using System.Runtime.Versioning;
     using AppIntBlockerGUI.Core;
+    using Microsoft.Extensions.ObjectPool;
 
     [SupportedOSPlatform("windows")]
     public class FirewallService : IFirewallService
     {
         private const string RuleNamePrefix = "AppBlocker Rule - ";
-        private readonly ILoggingService _loggingService;
-        private readonly Func<IPowerShellWrapper> _powerShellWrapperFactory;
+        private readonly ILoggingService loggingService;
+        private readonly Func<IPowerShellWrapper> powerShellWrapperFactory;
 
         public FirewallService(ILoggingService loggingService, Func<IPowerShellWrapper> powerShellWrapperFactory)
         {
-            _loggingService = loggingService;
-            _powerShellWrapperFactory = powerShellWrapperFactory;
+            this.loggingService = loggingService;
+            this.powerShellWrapperFactory = powerShellWrapperFactory;
         }
 
         public async Task<bool> BlockApplicationFiles(
@@ -42,7 +41,7 @@ namespace AppIntBlockerGUI.Services
             ILoggingService logger,
             CancellationToken cancellationToken)
         {
-            var powerShell = _powerShellWrapperFactory();
+            var powerShell = this.powerShellWrapperFactory();
             try
             {
                 if (!await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false))
@@ -272,7 +271,7 @@ namespace AppIntBlockerGUI.Services
 
         private async Task<bool> TryRemoveRulesWithPowerShell(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
                 if (!await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false))
@@ -363,7 +362,7 @@ namespace AppIntBlockerGUI.Services
         public async Task<List<string>> GetExistingRulesAsync(ILoggingService loggingService, CancellationToken cancellationToken = default)
         {
             var existingRules = new List<string>();
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
                 if (!await this.ImportFirewallModules(powerShell, loggingService, cancellationToken).ConfigureAwait(false))
@@ -403,7 +402,7 @@ namespace AppIntBlockerGUI.Services
 
         private async Task<bool> RunPowerShellScript(string script, ILoggingService loggingService, CancellationToken cancellationToken)
         {
-            using (var ps = _powerShellWrapperFactory())
+            using (var ps = this.powerShellWrapperFactory())
             {
                 ps.AddScript(script);
 
@@ -450,7 +449,7 @@ namespace AppIntBlockerGUI.Services
 
         private async Task<bool> TryRemoveSingleRuleWithPowerShell(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default)
         {
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
                 if (!await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false))
@@ -538,7 +537,7 @@ namespace AppIntBlockerGUI.Services
 
         public async Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger, CancellationToken cancellationToken = default)
         {
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
                 if (!await this.ImportFirewallModules(powerShell, logger, cancellationToken).ConfigureAwait(false))
@@ -571,15 +570,15 @@ namespace AppIntBlockerGUI.Services
         public async Task<List<AppIntBlockerGUI.Models.FirewallRuleModel>> GetAllFirewallRulesAsync(CancellationToken cancellationToken = default)
         {
             var rules = new List<AppIntBlockerGUI.Models.FirewallRuleModel>();
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
-                if (!await this.ImportFirewallModules(powerShell, _loggingService, cancellationToken).ConfigureAwait(false))
+                if (!await this.ImportFirewallModules(powerShell, this.loggingService, cancellationToken).ConfigureAwait(false))
                 {
                     return rules; // Error logged in module import
                 }
 
-                var script = $"Get-NetFirewallRule -DisplayName '{RuleNamePrefix}*' | Select-Object DisplayName, Enabled, Direction, Action";
+                var script = $"Get-NetFirewallRule | Select-Object DisplayName, Name, Enabled, Direction, Action, Program";
                 powerShell.AddScript(script);
 
                 var results = await powerShell.InvokeAsync();
@@ -587,7 +586,7 @@ namespace AppIntBlockerGUI.Services
                 if (powerShell.HadErrors)
                 {
                     var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
-                    _loggingService.LogError($"Error getting all firewall rules: {string.Join("; ", errors)}");
+                    this.loggingService.LogError($"Error getting all firewall rules: {string.Join("; ", errors)}");
                     return rules;
                 }
 
@@ -597,24 +596,25 @@ namespace AppIntBlockerGUI.Services
                     {
                         if (psObject?.Properties["DisplayName"]?.Value is string displayName)
                         {
-                            var enabledValue = psObject.Properties["Enabled"]?.Value as bool? ?? false;
-                            var directionValue = psObject.Properties["Direction"]?.Value as string ?? "Unknown";
-                            var actionValue = psObject.Properties["Action"]?.Value as string ?? "Unknown";
-
-                            rules.Add(new Models.FirewallRuleModel
+                            var rule = new Models.FirewallRuleModel
                             {
-                                Name = displayName,
-                                IsEnabled = enabledValue,
-                                Direction = directionValue,
-                                Action = actionValue,
-                            });
+                                DisplayName = displayName,
+                                RuleName = psObject.Properties["Name"]?.Value as string ?? string.Empty,
+                                IsEnabled = psObject.Properties["Enabled"]?.Value as bool? ?? false,
+                                Enabled = psObject.Properties["Enabled"]?.Value as bool? ?? false,
+                                Direction = psObject.Properties["Direction"]?.Value as string ?? "Unknown",
+                                Action = psObject.Properties["Action"]?.Value as string ?? "Unknown",
+                                ProgramPath = psObject.Properties["Program"]?.Value as string ?? "N/A",
+                                IsAppIntBlockerRule = displayName.StartsWith(RuleNamePrefix, StringComparison.OrdinalIgnoreCase)
+                            };
+                            rules.Add(rule);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Exception in GetAllFirewallRulesAsync", ex);
+                this.loggingService.LogError("Exception in GetAllFirewallRulesAsync", ex);
             }
 
             return rules;
@@ -622,10 +622,10 @@ namespace AppIntBlockerGUI.Services
 
         public async Task<bool> DeleteRuleAsync(string ruleName, CancellationToken cancellationToken = default)
         {
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
-                if (!await this.ImportFirewallModules(powerShell, _loggingService, cancellationToken).ConfigureAwait(false))
+                if (!await this.ImportFirewallModules(powerShell, this.loggingService, cancellationToken).ConfigureAwait(false))
                 {
                     return false;
                 }
@@ -638,7 +638,7 @@ namespace AppIntBlockerGUI.Services
                 if (powerShell.HadErrors)
                 {
                     var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
-                    _loggingService.LogError($"Error deleting rule '{ruleName}': {string.Join("; ", errors)}");
+                    this.loggingService.LogError($"Error deleting rule '{ruleName}': {string.Join("; ", errors)}");
                     return false;
                 }
 
@@ -646,17 +646,17 @@ namespace AppIntBlockerGUI.Services
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Exception deleting rule '{ruleName}'", ex);
+                this.loggingService.LogError($"Exception deleting rule '{ruleName}'", ex);
                 return false;
             }
         }
 
         public async Task<bool> ToggleRuleAsync(string ruleName, bool enable, CancellationToken cancellationToken = default)
         {
-            using var powerShell = this._powerShellWrapperFactory();
+            using var powerShell = this.powerShellWrapperFactory();
             try
             {
-                if (!await this.ImportFirewallModules(powerShell, _loggingService, cancellationToken).ConfigureAwait(false))
+                if (!await this.ImportFirewallModules(powerShell, this.loggingService, cancellationToken).ConfigureAwait(false))
                 {
                     return false;
                 }
@@ -670,7 +670,7 @@ namespace AppIntBlockerGUI.Services
                 if (powerShell.HadErrors)
                 {
                     var errors = powerShell.Errors.Select(e => e.Exception?.Message).Where(e => !string.IsNullOrEmpty(e)).ToList();
-                    _loggingService.LogError($"Error toggling rule '{ruleName}': {string.Join("; ", errors)}");
+                    this.loggingService.LogError($"Error toggling rule '{ruleName}': {string.Join("; ", errors)}");
                     return false;
                 }
 
@@ -678,7 +678,7 @@ namespace AppIntBlockerGUI.Services
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Exception toggling rule '{ruleName}'", ex);
+                this.loggingService.LogError($"Exception toggling rule '{ruleName}'", ex);
                 return false;
             }
         }
@@ -700,7 +700,7 @@ namespace AppIntBlockerGUI.Services
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Failed to open Windows Firewall with Advanced Security.", ex);
+                this.loggingService.LogError("Failed to open Windows Firewall with Advanced Security.", ex);
             }
         }
 

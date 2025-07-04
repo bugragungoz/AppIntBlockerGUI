@@ -8,11 +8,11 @@
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
-using System.Management.Automation;
-using Microsoft.Extensions.ObjectPool;
-
 namespace AppIntBlockerGUI.Core
 {
+    using System.Management.Automation;
+    using Microsoft.Extensions.ObjectPool;
+
     /// <summary>
     /// Implements the <see cref="IPooledObjectPolicy{T}"/> for managing PowerShell instances in an object pool.
     /// This helps reuse PowerShell runspaces to improve performance.
