@@ -7,6 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.1.0</Version>
+    <Authors>Your Name or Company</Authors>
+    <Description>A GUI application to easily block or unblock applications using the Windows Firewall.</Description>
 
   </PropertyGroup>
 
