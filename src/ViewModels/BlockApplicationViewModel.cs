@@ -232,15 +232,11 @@ o      o  o   o  o      o  o   o  o     o
         [RelayCommand]
         private void Browse()
         {
-            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            // FIXED: Use dialog service instead of directly using Windows Forms
+            var selectedPath = _dialogService.OpenFolderDialog();
+            if (!string.IsNullOrEmpty(selectedPath))
             {
-                dialog.Description = "Select the application folder to block";
-                dialog.ShowNewFolderButton = true;
-                
-                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    ApplicationPath = dialog.SelectedPath;
-                }
+                ApplicationPath = selectedPath;
             }
         }
 
@@ -353,7 +349,7 @@ o      o  o   o  o      o  o   o  o     o
                     excludedFiles,
                     _loggingService,
                     _cancellationTokenSource.Token
-                );
+                ).ConfigureAwait(false);
 
                 CurrentOperationStatus = "Operation completed successfully";
                 _dialogService.ShowInfo($"Application '{FolderName}' has been blocked successfully.");
@@ -376,20 +372,32 @@ o      o  o   o  o      o  o   o  o     o
             var elapsed = TimeSpan.Zero;
             var estimatedTotal = TimeSpan.FromSeconds(30); // Base estimate
 
-            while (IsOperationInProgress)
+            try
             {
-                await Task.Delay(1000, _cancellationTokenSource.Token);
-                elapsed = elapsed.Add(TimeSpan.FromSeconds(1));
-                
-                var remaining = estimatedTotal - elapsed;
-                if (remaining.TotalSeconds > 0)
+                while (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    EstimatedTimeRemaining = $"{remaining.Minutes:D2}:{remaining.Seconds:D2}";
+                    // CRITICAL FIX: Check both cancellation token and operation status
+                    if (!IsOperationInProgress)
+                        break;
+
+                    await Task.Delay(1000, _cancellationTokenSource.Token).ConfigureAwait(false);
+                    elapsed = elapsed.Add(TimeSpan.FromSeconds(1));
+                    
+                    var remaining = estimatedTotal - elapsed;
+                    if (remaining.TotalSeconds > 0)
+                    {
+                        EstimatedTimeRemaining = $"{remaining.Minutes:D2}:{remaining.Seconds:D2}";
+                    }
+                    else
+                    {
+                        EstimatedTimeRemaining = "Finalizing...";
+                    }
                 }
-                else
-                {
-                    EstimatedTimeRemaining = "Finalizing...";
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Operation was cancelled, this is expected
+                EstimatedTimeRemaining = "00:00";
             }
         }
 

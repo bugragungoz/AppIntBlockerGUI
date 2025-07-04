@@ -71,14 +71,30 @@ namespace AppIntBlockerGUI.Services
                                 if (!string.IsNullOrEmpty(creationTimeStr))
                                 {
                                     // WMI datetime format: YYYYMMDDHHMMSS.mmmmmm+UUU
-                                    if (DateTime.TryParseExact(creationTimeStr.Substring(0, 14), 
-                                        "yyyyMMddHHmmss", null, System.Globalization.DateTimeStyles.None, out DateTime creationTime))
+                                    // CRITICAL FIX: Validate length before substring
+                                    if (creationTimeStr.Length >= 14)
                                     {
-                                        restorePoint.CreationTime = creationTime;
+                                        if (DateTime.TryParseExact(creationTimeStr.Substring(0, 14), 
+                                            "yyyyMMddHHmmss", null, System.Globalization.DateTimeStyles.None, out DateTime creationTime))
+                                        {
+                                            restorePoint.CreationTime = creationTime;
+                                        }
+                                        else
+                                        {
+                                            restorePoint.CreationTime = DateTime.Now;
+                                        }
                                     }
                                     else
                                     {
-                                        restorePoint.CreationTime = DateTime.Now;
+                                        // Fallback: try to parse the full string
+                                        if (DateTime.TryParse(creationTimeStr, out DateTime fallbackTime))
+                                        {
+                                            restorePoint.CreationTime = fallbackTime;
+                                        }
+                                        else
+                                        {
+                                            restorePoint.CreationTime = DateTime.Now;
+                                        }
                                     }
                                 }
                                 else

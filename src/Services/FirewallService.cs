@@ -27,7 +27,7 @@ namespace AppIntBlockerGUI.Services
         {
             using (var powerShell = PowerShell.Create())
             {
-                if (!await ImportFirewallModules(powerShell, logger))
+                if (!await ImportFirewallModules(powerShell, logger).ConfigureAwait(false))
                 {
                     logger.LogError("Failed to import required PowerShell modules. Aborting block operation.");
                     return false;
@@ -75,8 +75,8 @@ namespace AppIntBlockerGUI.Services
                     }
 
                     var ruleName = $"AppBlocker Rule - {applicationName} - {Path.GetFileName(file)}";
-                    await CreateFirewallRule(powerShell, file, ruleName, "Inbound", logger);
-                    await CreateFirewallRule(powerShell, file, ruleName, "Outbound", logger);
+                    await CreateFirewallRule(powerShell, file, ruleName, "Inbound", logger).ConfigureAwait(false);
+                    await CreateFirewallRule(powerShell, file, ruleName, "Outbound", logger).ConfigureAwait(false);
                 }
 
                 logger.LogInfo($"Block operation completed for {applicationName}.");
@@ -91,7 +91,7 @@ namespace AppIntBlockerGUI.Services
                 // Set execution policy to bypass for this session
                 powerShell.Commands.Clear();
                 powerShell.AddScript("Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force");
-                await Task.Run(() => powerShell.Invoke());
+                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -104,7 +104,7 @@ namespace AppIntBlockerGUI.Services
                 // Import NetSecurity module for firewall cmdlets
                 powerShell.Commands.Clear();
                 powerShell.AddScript("Import-Module NetSecurity -Force");
-                await Task.Run(() => powerShell.Invoke());
+                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -128,14 +128,14 @@ namespace AppIntBlockerGUI.Services
             try
             {
                 // Try PowerShell first
-                if (await TryCreateFirewallRuleWithPowerShell(powerShell, filePath, displayName, direction, logger))
+                if (await TryCreateFirewallRuleWithPowerShell(powerShell, filePath, displayName, direction, logger).ConfigureAwait(false))
                 {
                     return true;
                 }
 
                 // Fallback to netsh command
                 logger.LogInfo($"PowerShell failed, trying netsh for rule: {displayName}");
-                return await CreateFirewallRuleWithNetsh(filePath, displayName, direction, logger);
+                return await CreateFirewallRuleWithNetsh(filePath, displayName, direction, logger).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -155,7 +155,7 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("DisplayName", displayName)
                     .AddParameter("ErrorAction", "SilentlyContinue");
 
-                var existingRules = await Task.Run(() => powerShell.Invoke());
+                var existingRules = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
                 
                 if (existingRules.Any())
                 {
@@ -175,7 +175,7 @@ namespace AppIntBlockerGUI.Services
                     .AddParameter("Enabled", "True")
                     .AddParameter("ErrorAction", "Stop");
 
-                var results = await Task.Run(() => powerShell.Invoke());
+                var results = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
                 if (powerShell.HadErrors)
                 {
@@ -210,22 +210,26 @@ namespace AppIntBlockerGUI.Services
 
                 using (var process = Process.Start(processInfo))
                 {
-                    if (process != null)
+                    // CRITICAL FIX: Check for null
+                    if (process == null)
                     {
-                        var output = await process.StandardOutput.ReadToEndAsync();
-                        var error = await process.StandardError.ReadToEndAsync();
-                        
-                        await Task.Run(() => process.WaitForExit());
+                        logger.LogError($"Failed to start netsh process for rule: {displayName}");
+                        return false;
+                    }
 
-                        if (process.ExitCode == 0)
-                        {
-                            logger.LogInfo($"Successfully created firewall rule with netsh: {displayName}");
-                            return true;
-                        }
-                        else
-                        {
-                            throw new Exception($"netsh exit code: {process.ExitCode}, Error: {error}");
-                        }
+                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                    var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                    
+                    await process.WaitForExitAsync().ConfigureAwait(false);
+
+                    if (process.ExitCode == 0)
+                    {
+                        logger.LogInfo($"Successfully created firewall rule with netsh: {displayName}");
+                        return true;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"netsh exit code: {process.ExitCode}, Error: {error}");
                     }
                 }
 
@@ -245,14 +249,14 @@ namespace AppIntBlockerGUI.Services
                 logger.LogInfo($"Removing firewall rules for application: {applicationName}");
 
                 // Try PowerShell first
-                if (await TryRemoveRulesWithPowerShell(applicationName, logger))
+                if (await TryRemoveRulesWithPowerShell(applicationName, logger).ConfigureAwait(false))
                 {
                     return true;
                 }
 
                 // Fallback to netsh
                 logger.LogInfo("PowerShell removal failed, trying netsh approach...");
-                return await RemoveRulesWithNetsh(applicationName, logger);
+                return await RemoveRulesWithNetsh(applicationName, logger).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -268,14 +272,14 @@ namespace AppIntBlockerGUI.Services
                 using (var powerShell = PowerShell.Create())
                 {
                     // Import required modules
-                    await ImportFirewallModules(powerShell, logger);
+                    await ImportFirewallModules(powerShell, logger).ConfigureAwait(false);
 
                     // First, get ALL rules and filter manually (wildcard doesn't work reliably)
                     powerShell.Commands.Clear();
                     powerShell.AddCommand("Get-NetFirewallRule")
                         .AddParameter("ErrorAction", "SilentlyContinue");
 
-                    var allRules = await Task.Run(() => powerShell.Invoke());
+                    var allRules = await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
                     
                     if (powerShell.HadErrors)
                     {
@@ -315,7 +319,7 @@ namespace AppIntBlockerGUI.Services
                                     .AddParameter("DisplayName", displayName)
                                     .AddParameter("ErrorAction", "Stop");
 
-                                await Task.Run(() => powerShell.Invoke());
+                                await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
                                 if (!powerShell.HadErrors)
                                 {
@@ -367,20 +371,23 @@ namespace AppIntBlockerGUI.Services
 
                 using (var process = Process.Start(listProcess))
                 {
-                    if (process != null)
+                    if (process == null)
                     {
-                        var output = await process.StandardOutput.ReadToEndAsync();
-                        await Task.Run(() => process.WaitForExit());
+                        logger.LogError("Failed to start netsh process for listing rules");
+                        return false;
+                    }
 
-                        // Parse output to find matching rule names
-                        var lines = output.Split('\n');
-                        foreach (var line in lines)
+                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                    await process.WaitForExitAsync().ConfigureAwait(false);
+
+                    // Parse output to find matching rule names
+                    var lines = output.Split('\n');
+                    foreach (var line in lines)
+                    {
+                        if (line.StartsWith("Rule Name:") && line.Contains(targetPrefix))
                         {
-                            if (line.StartsWith("Rule Name:") && line.Contains(targetPrefix))
-                            {
-                                var ruleName = line.Substring("Rule Name:".Length).Trim();
-                                rulesToRemove.Add(ruleName);
-                            }
+                            var ruleName = line.Substring("Rule Name:".Length).Trim();
+                            rulesToRemove.Add(ruleName);
                         }
                     }
                 }
@@ -411,21 +418,24 @@ namespace AppIntBlockerGUI.Services
 
                         using (var process = Process.Start(removeProcess))
                         {
-                            if (process != null)
+                            if (process == null)
                             {
-                                var output = await process.StandardOutput.ReadToEndAsync();
-                                var error = await process.StandardError.ReadToEndAsync();
-                                await Task.Run(() => process.WaitForExit());
+                                logger.LogError($"Failed to start netsh process to remove rule: {ruleName}");
+                                continue;
+                            }
 
-                                if (process.ExitCode == 0)
-                                {
-                                    removedCount++;
-                                    logger.LogInfo($"Successfully removed rule with netsh: {ruleName}");
-                                }
-                                else
-                                {
-                                    logger.LogWarning($"Failed to remove rule '{ruleName}' with netsh. Error: {error}");
-                                }
+                            var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                            var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                            await process.WaitForExitAsync().ConfigureAwait(false);
+
+                            if (process.ExitCode == 0)
+                            {
+                                removedCount++;
+                                logger.LogInfo($"Successfully removed rule with netsh: {ruleName}");
+                            }
+                            else
+                            {
+                                logger.LogWarning($"Failed to remove rule '{ruleName}' with netsh. Error: {error}");
                             }
                         }
                     }
@@ -520,22 +530,25 @@ namespace AppIntBlockerGUI.Services
 
                 using (var process = Process.Start(listProcess))
                 {
-                    if (process != null)
+                    if (process == null)
                     {
-                        var output = await process.StandardOutput.ReadToEndAsync();
-                        await Task.Run(() => process.WaitForExit());
+                        logger.LogError("Failed to start netsh process for getting existing rules");
+                        return new List<string>();
+                    }
 
-                        // Parse output to find AppIntBlocker rules
-                        var lines = output.Split('\n');
-                        foreach (var line in lines)
+                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                    await process.WaitForExitAsync().ConfigureAwait(false);
+
+                    // Parse output to find AppIntBlocker rules
+                    var lines = output.Split('\n');
+                    foreach (var line in lines)
+                    {
+                        if (line.StartsWith("Rule Name:"))
                         {
-                            if (line.StartsWith("Rule Name:"))
+                            var ruleName = line.Substring("Rule Name:".Length).Trim();
+                            if (!string.IsNullOrEmpty(ruleName) && ruleName.StartsWith(RuleNamePrefix))
                             {
-                                var ruleName = line.Substring("Rule Name:".Length).Trim();
-                                if (!string.IsNullOrEmpty(ruleName) && ruleName.StartsWith(RuleNamePrefix))
-                                {
-                                    appBlockerRules.Add(ruleName);
-                                }
+                                appBlockerRules.Add(ruleName);
                             }
                         }
                     }
@@ -627,22 +640,25 @@ namespace AppIntBlockerGUI.Services
 
                 using (var process = Process.Start(removeProcess))
                 {
-                    if (process != null)
+                    if (process == null)
                     {
-                        var output = await process.StandardOutput.ReadToEndAsync();
-                        var error = await process.StandardError.ReadToEndAsync();
-                        await Task.Run(() => process.WaitForExit());
+                        logger.LogError($"Failed to start netsh process to remove single rule: {ruleName}");
+                        return false;
+                    }
 
-                        if (process.ExitCode == 0)
-                        {
-                            logger.LogInfo($"Successfully removed rule with netsh: {ruleName}");
-                            return true;
-                        }
-                        else
-                        {
-                            logger.LogWarning($"Failed to remove rule '{ruleName}' with netsh. Error: {error}");
-                            return false;
-                        }
+                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                    var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                    await process.WaitForExitAsync().ConfigureAwait(false);
+
+                    if (process.ExitCode == 0)
+                    {
+                        logger.LogInfo($"Successfully removed rule with netsh: {ruleName}");
+                        return true;
+                    }
+                    else
+                    {
+                        logger.LogWarning($"Failed to remove rule '{ruleName}' with netsh. Error: {error}");
+                        return false;
                     }
                 }
 
@@ -730,8 +746,10 @@ namespace AppIntBlockerGUI.Services
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // FIXED: Log the exception instead of silent fail
+                System.Diagnostics.Debug.WriteLine($"Exception getting all firewall rules: {ex.Message}");
                 // Return empty list on error
             }
 
@@ -748,13 +766,23 @@ namespace AppIntBlockerGUI.Services
                         .AddParameter("DisplayName", ruleName)
                         .AddParameter("ErrorAction", "Stop");
 
-                    await Task.Run(() => powerShell.Invoke());
+                    await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
-                    return !powerShell.HadErrors;
+                    if (powerShell.HadErrors)
+                    {
+                        var errors = powerShell.Streams.Error.ReadAll();
+                        var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                        System.Diagnostics.Debug.WriteLine($"PowerShell errors deleting rule '{ruleName}': {errorMessage}");
+                        return false;
+                    }
+
+                    return true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // FIXED: Log the exception instead of silent fail
+                System.Diagnostics.Debug.WriteLine($"Exception deleting rule '{ruleName}': {ex.Message}");
                 return false;
             }
         }
@@ -770,31 +798,51 @@ namespace AppIntBlockerGUI.Services
                         .AddParameter("DisplayName", ruleName)
                         .AddParameter("ErrorAction", "Stop");
 
-                    await Task.Run(() => powerShell.Invoke());
+                    await Task.Run(() => powerShell.Invoke()).ConfigureAwait(false);
 
-                    return !powerShell.HadErrors;
+                    if (powerShell.HadErrors)
+                    {
+                        var errors = powerShell.Streams.Error.ReadAll();
+                        var errorMessage = string.Join("; ", errors.Select(e => e.ToString()));
+                        System.Diagnostics.Debug.WriteLine($"PowerShell errors toggling rule '{ruleName}' to {(enable ? "enabled" : "disabled")}: {errorMessage}");
+                        return false;
+                    }
+
+                    return true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // FIXED: Log the exception instead of silent fail
+                System.Diagnostics.Debug.WriteLine($"Exception toggling rule '{ruleName}' to {(enable ? "enabled" : "disabled")}: {ex.Message}");
                 return false;
             }
         }
 
-        public void OpenWindowsFirewallWithAdvancedSecurity()
+    public void OpenWindowsFirewallWithAdvancedSecurity()
+    {
+        try
         {
-            try
+            var process = Process.Start(new ProcessStartInfo
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "wf.msc",
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception)
+                FileName = "wf.msc",
+                UseShellExecute = true
+            });
+            
+            if (process == null)
             {
-                // Silent fail
+                throw new InvalidOperationException("Failed to start Windows Firewall management console");
             }
+        }
+        catch (Exception ex)
+        {
+            // FIXED: Log the exception instead of silent fail
+            // Note: We don't have logger here, but we should avoid silent failures
+            System.Diagnostics.Debug.WriteLine($"Failed to open Windows Firewall with Advanced Security: {ex.Message}");
+            
+            // Consider showing user-friendly message in a real application
+            // _dialogService?.ShowError("Could not open Windows Firewall management console. " +
+            //     "Please open it manually from Control Panel.");
         }
     }
 } 

@@ -16,7 +16,26 @@ namespace AppIntBlockerGUI.Services
     public class LoggingService : ILoggingService
     {
         private readonly ILogger _logger;
-        public event Action<string> LogEntryAdded = delegate { };
+        private readonly object _eventLock = new object();
+        private event Action<string>? _logEntryAdded;
+
+        public event Action<string> LogEntryAdded
+        {
+            add
+            {
+                lock (_eventLock)
+                {
+                    _logEntryAdded += value;
+                }
+            }
+            remove
+            {
+                lock (_eventLock)
+                {
+                    _logEntryAdded -= value;
+                }
+            }
+        }
 
         public LoggingService()
         {
@@ -34,18 +53,37 @@ namespace AppIntBlockerGUI.Services
             LogInfo("LoggingService initialized");
         }
 
+        private void InvokeLogEntryAdded(string logEntry)
+        {
+            Action<string>? handler;
+            lock (_eventLock)
+            {
+                handler = _logEntryAdded;
+            }
+            
+            // Invoke on UI thread if needed
+            if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == true)
+            {
+                handler?.Invoke(logEntry);
+            }
+            else
+            {
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => handler?.Invoke(logEntry));
+            }
+        }
+
         public void LogInfo(string message)
         {
             var logEntry = $"[{DateTime.Now:HH:mm:ss}] INFO: {message}";
             _logger.Information(message);
-            LogEntryAdded?.Invoke(logEntry);
+            InvokeLogEntryAdded(logEntry);
         }
 
         public void LogWarning(string message)
         {
             var logEntry = $"[{DateTime.Now:HH:mm:ss}] WARN: {message}";
             _logger.Warning(message);
-            LogEntryAdded?.Invoke(logEntry);
+            InvokeLogEntryAdded(logEntry);
         }
 
         public void LogError(string message, Exception? exception = null)
@@ -60,14 +98,14 @@ namespace AppIntBlockerGUI.Services
             {
                 _logger.Error(message);
             }
-            LogEntryAdded?.Invoke(logEntry);
+            InvokeLogEntryAdded(logEntry);
         }
 
         public void LogDebug(string message)
         {
             var logEntry = $"[{DateTime.Now:HH:mm:ss}] DEBUG: {message}";
             _logger.Debug(message);
-            LogEntryAdded?.Invoke(logEntry);
+            InvokeLogEntryAdded(logEntry);
         }
     }
 } 

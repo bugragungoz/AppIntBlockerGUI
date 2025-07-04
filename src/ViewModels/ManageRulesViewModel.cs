@@ -12,7 +12,7 @@ using System.Management.Automation;
 
 namespace AppIntBlockerGUI.ViewModels
 {
-    public partial class ManageRulesViewModel : ObservableObject
+    public partial class ManageRulesViewModel : ObservableObject, IDisposable
     {
         private readonly IFirewallService _firewallService;
         private readonly ILoggingService _loggingService;
@@ -48,11 +48,14 @@ namespace AppIntBlockerGUI.ViewModels
         [ObservableProperty]
         private bool hasSelectedRule;
 
-        public ManageRulesViewModel()
+        public ManageRulesViewModel(
+            IFirewallService firewallService,
+            ILoggingService loggingService,
+            IDialogService dialogService)
         {
-            _firewallService = new FirewallService();
-            _loggingService = new LoggingService();
-            _dialogService = new DialogService();
+            _firewallService = firewallService ?? throw new ArgumentNullException(nameof(firewallService));
+            _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
+            _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
             // Subscribe to logging events
             _loggingService.LogEntryAdded += OnLogEntryAdded;
@@ -188,41 +191,60 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                // Expected format: "AppBlocker Rule - ApplicationName - FileName (Direction)"
-                if (string.IsNullOrEmpty(ruleName) || !ruleName.StartsWith("AppBlocker Rule - "))
-                    return null;
-
-                // Split by " - " but be careful about file names that might contain dashes
-                var parts = ruleName.Split(new[] { " - " }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 3)
+                // ROBUST PARSING with validation
+                if (string.IsNullOrWhiteSpace(ruleName))
                 {
-                    _loggingService.LogWarning($"Invalid rule format: {ruleName}");
+                    _loggingService.LogWarning("Cannot parse null or empty rule name");
                     return null;
                 }
 
-                var applicationName = parts[1].Trim();
-                
-                // Reconstruct the file and direction part (in case filename had dashes)
-                var fileAndDirection = string.Join(" - ", parts.Skip(2));
+                const string expectedPrefix = "AppBlocker Rule - ";
+                if (!ruleName.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    _loggingService.LogDebug($"Rule does not match expected format: {ruleName}");
+                    return null;
+                }
 
-                // Extract direction from parentheses at the end
-                var directionStart = fileAndDirection.LastIndexOf('(');
-                var directionEnd = fileAndDirection.LastIndexOf(')');
+                // Remove prefix
+                var nameWithoutPrefix = ruleName.Substring(expectedPrefix.Length);
                 
-                if (directionStart == -1 || directionEnd == -1 || directionEnd != fileAndDirection.Length - 1)
+                // Validate minimum length
+                if (nameWithoutPrefix.Length < 10) // Minimum reasonable length
+                {
+                    _loggingService.LogWarning($"Rule name too short after prefix removal: {ruleName}");
+                    return null;
+                }
+
+                // Look for direction pattern at the end: " (Inbound)" or " (Outbound)"
+                var directionPattern = @"\s+\((Inbound|Outbound)\)$";
+                var directionMatch = System.Text.RegularExpressions.Regex.Match(nameWithoutPrefix, directionPattern, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (!directionMatch.Success)
                 {
                     _loggingService.LogWarning($"Could not parse direction from rule: {ruleName}");
                     return null;
                 }
 
-                var direction = fileAndDirection.Substring(directionStart + 1, directionEnd - directionStart - 1).Trim();
-                var fileName = fileAndDirection.Substring(0, directionStart).Trim();
+                var direction = directionMatch.Groups[1].Value;
+                var nameWithoutDirection = nameWithoutPrefix.Substring(0, directionMatch.Index);
 
-                // Validate direction
-                if (!direction.Equals("Inbound", StringComparison.OrdinalIgnoreCase) && 
-                    !direction.Equals("Outbound", StringComparison.OrdinalIgnoreCase))
+                // Split by " - " to get application and file
+                var parts = nameWithoutDirection.Split(new[] { " - " }, 2, StringSplitOptions.None);
+                
+                if (parts.Length != 2)
                 {
-                    _loggingService.LogWarning($"Invalid direction '{direction}' in rule: {ruleName}");
+                    _loggingService.LogWarning($"Invalid rule format, expected 'App - File': {ruleName}");
+                    return null;
+                }
+
+                var applicationName = parts[0].Trim();
+                var fileName = parts[1].Trim();
+
+                // Validate components
+                if (string.IsNullOrWhiteSpace(applicationName) || string.IsNullOrWhiteSpace(fileName))
+                {
+                    _loggingService.LogWarning($"Empty application or file name in rule: {ruleName}");
                     return null;
                 }
 
@@ -231,13 +253,14 @@ namespace AppIntBlockerGUI.ViewModels
                     RuleName = ruleName,
                     ApplicationName = applicationName,
                     Direction = direction,
-                    Status = "Enabled", // Rules we can retrieve are enabled
-                    ProgramPath = fileName
+                    Status = "Enabled",
+                    ProgramPath = fileName,
+                    DisplayName = ruleName
                 };
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Error parsing rule name: {ruleName}", ex);
+                _loggingService.LogError($"Exception parsing rule name: {ruleName}", ex);
                 return null;
             }
         }
@@ -431,17 +454,13 @@ namespace AppIntBlockerGUI.ViewModels
             {
                 _loggingService.LogInfo("Opening import file dialog...");
                 
-                // Create an OpenFileDialog (this would normally be in DialogService)
-                var dialog = new Microsoft.Win32.OpenFileDialog
-                {
-                    Title = "Import Firewall Rules",
-                    Filter = "XML Files (*.xml)|*.xml|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
-                    DefaultExt = ".xml"
-                };
+                // FIXED: Use dialog service
+                var fileName = _dialogService.OpenFileDialog(
+                    "Import Firewall Rules",
+                    "XML Files (*.xml)|*.xml|Text Files (*.txt)|*.txt|All Files (*.*)|*.*");
 
-                if (dialog.ShowDialog() == true)
+                if (!string.IsNullOrEmpty(fileName))
                 {
-                    var fileName = dialog.FileName;
                     _loggingService.LogInfo($"Importing rules from: {fileName}");
                     
                     // For now, just log the import action
@@ -458,7 +477,7 @@ namespace AppIntBlockerGUI.ViewModels
             catch (Exception ex)
             {
                 _loggingService.LogError("Error importing rules", ex);
-                _dialogService.ShowMessage("Failed to import rules. Check the log for details.", "Error");
+                _dialogService.ShowError("Failed to import rules. Check the log for details.");
             }
         }
 
@@ -467,6 +486,11 @@ namespace AppIntBlockerGUI.ViewModels
         {
             OperationLog = string.Empty;
             _loggingService.LogInfo("Operation log cleared by user");
+        }
+
+        public void Dispose()
+        {
+            _loggingService.LogEntryAdded -= OnLogEntryAdded;
         }
     }
 } 
