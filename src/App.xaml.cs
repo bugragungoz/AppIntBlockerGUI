@@ -43,6 +43,7 @@ namespace AppIntBlockerGUI
                     services.AddSingleton<ISystemRestoreService, SystemRestoreService>();
                     services.AddSingleton<IFirewallService, FirewallService>();
                     services.AddSingleton<SettingsService>();
+                    services.AddSingleton<ILoggingService, LoggingService>();
                     services.AddSingleton<LoggingService>();
 
                     services.AddSingleton<MainWindowViewModel>();
@@ -84,6 +85,13 @@ namespace AppIntBlockerGUI
                 .Build();
 
             ServiceProvider = AppHost.Services;
+
+            // Subscribe to unhandled exception events as early as possible so that we can surface
+            // any unexpected failures to the user instead of silently terminating the elevated
+            // instance and leaving the impression that the application did not start.
+            this.DispatcherUnhandledException += this.Application_DispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += this.CurrentDomain_UnhandledException;
+            TaskScheduler.UnobservedTaskException += this.TaskScheduler_UnobservedTaskException;
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -119,6 +127,28 @@ namespace AppIntBlockerGUI
             logger?.LogCritical(e.Exception, "An unhandled exception occurred");
             MessageBox.Show($"An unhandled exception occurred: {e.Exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
+            Current.Shutdown();
+        }
+
+        private void CurrentDomain_UnhandledException(object? sender, UnhandledExceptionEventArgs e)
+        {
+            var exception = e.ExceptionObject as Exception;
+            var logger = ServiceProvider?.GetRequiredService<ILogger<App>>();
+            logger?.LogCritical(exception, "An unhandled domain exception occurred");
+
+            // Attempt to show a user-friendly message before we terminate.
+            MessageBox.Show($"An unhandled exception occurred: {exception?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Current.Shutdown();
+        }
+
+        private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            var exception = e.Exception;
+            var logger = ServiceProvider?.GetRequiredService<ILogger<App>>();
+            logger?.LogCritical(exception, "An unhandled task exception occurred");
+
+            // Attempt to show a user-friendly message before we terminate.
+            MessageBox.Show($"An unhandled task exception occurred: {exception?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Current.Shutdown();
         }
 
