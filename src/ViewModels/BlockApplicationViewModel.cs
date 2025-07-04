@@ -1,97 +1,124 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using AppIntBlockerGUI.Services;
-using AppIntBlockerGUI.Models;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Threading;
-using System.Windows;
-using System.Diagnostics;
-using System.Windows.Threading;
-using System.Security;
-using System.Text.RegularExpressions;
+// <copyright file="BlockApplicationViewModel.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.ViewModels
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Security;
+    using System.Text.RegularExpressions;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Windows.Threading;
+    using AppIntBlockerGUI.Models;
+    using AppIntBlockerGUI.Services;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+
     public partial class BlockApplicationViewModel : ObservableObject, IDisposable
     {
-        private readonly IFirewallService _firewallService;
-        private readonly ILoggingService _loggingService;
-        private readonly IDialogService _dialogService;
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
-        private int _welcomeMessageLogIndex = -1;
+        private readonly IFirewallService firewallService;
+        private readonly ILoggingService loggingService;
+        private readonly IDialogService dialogService;
+        private readonly CancellationTokenSource cancellationTokenSource = new();
+        private int welcomeMessageLogIndex = -1;
 
         // Path and Operation Properties
-        [ObservableProperty] private string _operationName = "";
-        [ObservableProperty] private string _applicationPath = "";
+        [ObservableProperty]
+        private string operationName = string.Empty;
+        [ObservableProperty]
+        private string applicationPath = string.Empty;
 
-        public string FullRuleName => string.IsNullOrWhiteSpace(OperationName) ? "N/A" : $"AIB_{OperationName}";
+        public string FullRuleName => string.IsNullOrWhiteSpace(this.OperationName) ? "N/A" : $"AIB_{this.OperationName}";
 
         // Block Settings Properties
-        [ObservableProperty] private bool _includeExeFiles = true;
-        [ObservableProperty] private bool _includeDllFiles = true;
-        [ObservableProperty] private bool _includeSubfolders = true;
-        [ObservableProperty] private bool _createRestorePoint = true;
-        [ObservableProperty] private bool _useExclusions = false;
-        [ObservableProperty] private bool _enableDetailedLogging = false;
-        
+        [ObservableProperty]
+        private bool includeExeFiles = true;
+        [ObservableProperty]
+        private bool includeDllFiles = true;
+        [ObservableProperty]
+        private bool includeSubfolders = true;
+        [ObservableProperty]
+        private bool createRestorePoint = true;
+        [ObservableProperty]
+        private bool useExclusions = false;
+        [ObservableProperty]
+        private bool enableDetailedLogging = false;
+
         // Exclusion Properties
-        [ObservableProperty] private string _excludedKeywords = "";
-        [ObservableProperty] private string _excludedFiles = "";
+        [ObservableProperty]
+        private string excludedKeywords = string.Empty;
+        [ObservableProperty]
+        private string excludedFiles = string.Empty;
 
         // File Information Properties
-        [ObservableProperty] private string _folderName = "N/A";
-        [ObservableProperty] private string _subfoldersIncluded = "No";
-        [ObservableProperty] private string _executableFilesCount = "0";
-        [ObservableProperty] private string _libraryFilesCount = "0";
+        [ObservableProperty]
+        private string folderName = "N/A";
+        [ObservableProperty]
+        private string subfoldersIncluded = "No";
+        [ObservableProperty]
+        private string executableFilesCount = "0";
+        [ObservableProperty]
+        private string libraryFilesCount = "0";
 
         // Operation Status Properties
-        [ObservableProperty] private string _currentOperationStatus = "Waiting for operation";
-        [ObservableProperty] private bool _isOperationInProgress = false;
-        [ObservableProperty] private string _estimatedTimeRemaining = "00:00";
+        [ObservableProperty]
+        private string currentOperationStatus = "Waiting for operation";
+        [ObservableProperty]
+        private bool isOperationInProgress = false;
+        [ObservableProperty]
+        private string estimatedTimeRemaining = "00:00";
 
         // Activity Terminal Properties
-        [ObservableProperty] private string _asciiArt = "";
-        [ObservableProperty] private string _welcomeMessage = "";
+        [ObservableProperty]
+        private string asciiArt = string.Empty;
+        [ObservableProperty]
+        private string welcomeMessage = string.Empty;
+
         public ObservableCollection<string> LogEntries { get; } = new ObservableCollection<string>();
 
         // --- Compatibility Properties for refactored code ---
-        public string StatusMessage { get => CurrentOperationStatus; set => CurrentOperationStatus = value; }
-        public bool IsBlocking { get => IsOperationInProgress; set => IsOperationInProgress = value; }
-        public ObservableCollection<string> LogItems => LogEntries;
-        public int Progress { get; set; }
-        // --- End Compatibility Properties ---
+        public string StatusMessage { get => this.CurrentOperationStatus; set => this.CurrentOperationStatus = value; }
 
+        public bool IsBlocking { get => this.IsOperationInProgress; set => this.IsOperationInProgress = value; }
+
+        public ObservableCollection<string> LogItems => this.LogEntries;
+
+        public int Progress { get; set; }
+
+        // --- End Compatibility Properties ---
         public BlockApplicationViewModel(
-            IFirewallService firewallService, 
-            ILoggingService loggingService, 
+            IFirewallService firewallService,
+            ILoggingService loggingService,
             IDialogService dialogService)
         {
-            _firewallService = firewallService;
-            _loggingService = loggingService;
-            _dialogService = dialogService;
-            _loggingService.LogEntryAdded += OnLogEntryAdded;
+            this.firewallService = firewallService;
+            this.loggingService = loggingService;
+            this.dialogService = dialogService;
+            this.loggingService.LogEntryAdded += this.OnLogEntryAdded;
         }
 
         public async Task InitializeAsync()
         {
-            InitializeAsciiArt();
-            InitializeWelcomeMessage();
+            this.InitializeAsciiArt();
+            this.InitializeWelcomeMessage();
 
             // This must be on the UI thread
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                InitializeTerminal();
+                this.InitializeTerminal();
             });
         }
 
         private void InitializeAsciiArt()
         {
-            var styles = new[] 
+            var styles = new[]
             {
                 // Style 1
                 @"
@@ -111,7 +138,7 @@ namespace AppIntBlockerGUI.ViewModels
 \==\.       /==|_  . ,'. \==\ -    ,_ /==/, .--, - \/==/, `--`\
  `-.`.___.-'/==/  /\ ,  ) '.='. -   .'\==\- \/=/ , /\==\-  -, |
             `--`-`--`--'    `--`--''   `--`-'  `--`  `--`.-.--`",
-                
+
                 // Style 3
                 @"
   ,---.,--.--. ,---.,--.  ,--.,-----.
@@ -142,67 +169,74 @@ namespace AppIntBlockerGUI.ViewModels
             };
 
             var random = new Random();
-            AsciiArt = styles[random.Next(styles.Length)];
+            this.AsciiArt = styles[random.Next(styles.Length)];
         }
 
         private void InitializeWelcomeMessage()
         {
-            WelcomeMessage = "Welcome to AppIntBlocker v1.0 - Advanced Application Internet Access Control";
+            this.WelcomeMessage = "Welcome to AppIntBlocker v1.0 - Advanced Application Internet Access Control";
         }
 
         private void InitializeTerminal()
         {
-            LogEntries.Clear();
+            this.LogEntries.Clear();
+
             // Add ASCII art line by line
-            var asciiLines = AsciiArt.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            var asciiLines = this.AsciiArt.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var line in asciiLines)
             {
-                LogEntries.Add(line);
+                this.LogEntries.Add(line);
             }
-            
-            LogEntries.Add(""); // Spacer
-            LogEntries.Add(""); // Extra Spacer
-            LogEntries.Add(""); // Extra Spacer
-            
-            _welcomeMessageLogIndex = LogEntries.Count; // Store the index
-            LogEntries.Add(WelcomeMessage);
 
-            LogEntries.Add(""); // Spacer
-            LogEntries.Add("System initialized and ready to operate.");
+            this.LogEntries.Add(string.Empty); // Spacer
+            this.LogEntries.Add(string.Empty); // Extra Spacer
+            this.LogEntries.Add(string.Empty); // Extra Spacer
+
+            this.welcomeMessageLogIndex = this.LogEntries.Count; // Store the index
+            this.LogEntries.Add(this.WelcomeMessage);
+
+            this.LogEntries.Add(string.Empty); // Spacer
+            this.LogEntries.Add("System initialized and ready to operate.");
         }
 
         private void OnLogEntryAdded(string logEntry)
         {
             Application.Current?.Dispatcher.Invoke(() =>
             {
-                if (EnableDetailedLogging)
+                if (this.EnableDetailedLogging)
                 {
                     // Show full detailed log entry
-                    LogEntries.Add(logEntry);
+                    this.LogEntries.Add(logEntry);
                 }
                 else
                 {
                     // Show simplified log entry (remove technical details)
-                    var simplifiedEntry = SimplifyLogEntry(logEntry);
+                    var simplifiedEntry = this.SimplifyLogEntry(logEntry);
                     if (!string.IsNullOrEmpty(simplifiedEntry))
                     {
-                        LogEntries.Add(simplifiedEntry);
+                        this.LogEntries.Add(simplifiedEntry);
                     }
                 }
-                
+
                 // Keep terminal from getting too long
-                while (LogEntries.Count > 100)
+                while (this.LogEntries.Count > 100)
                 {
-                    LogEntries.RemoveAt(0);
+                    this.LogEntries.RemoveAt(0);
                 }
             });
         }
 
         private string SimplifyLogEntry(string logEntry)
         {
-            if (EnableDetailedLogging) return logEntry;
+            if (this.EnableDetailedLogging)
+            {
+                return logEntry;
+            }
 
-            if (logEntry.Contains("[DEBUG]")) return "";
+            if (logEntry.Contains("[DEBUG]"))
+            {
+                return string.Empty;
+            }
 
             var keywordsToSimple = new Dictionary<string, string>
             {
@@ -215,15 +249,22 @@ namespace AppIntBlockerGUI.ViewModels
             foreach (var pair in keywordsToSimple)
             {
                 if (logEntry.Contains(pair.Key))
+                {
                     return pair.Value;
+                }
             }
 
             if (logEntry.Contains("[ERROR]"))
-                return $"ERROR: {ExtractMainErrorMessage(logEntry)}";
+            {
+                return $"ERROR: {this.ExtractMainErrorMessage(logEntry)}";
+            }
+
             if (logEntry.Contains("[SUCCESS]"))
+            {
                 return logEntry;
-            
-            return ""; // Default to not showing the log
+            }
+
+            return string.Empty; // Default to not showing the log
         }
 
         private string ExtractMainErrorMessage(string logEntry)
@@ -234,6 +275,7 @@ namespace AppIntBlockerGUI.ViewModels
                 var parts = logEntry.Split(':');
                 return parts.Length > 1 ? parts[1].Trim() : logEntry;
             }
+
             return logEntry;
         }
 
@@ -241,68 +283,68 @@ namespace AppIntBlockerGUI.ViewModels
         private void Browse()
         {
             // FIXED: Use dialog service instead of directly using Windows Forms
-            var selectedPath = _dialogService.OpenFolderDialog();
+            var selectedPath = this.dialogService.OpenFolderDialog();
             if (!string.IsNullOrEmpty(selectedPath))
             {
-                ApplicationPath = selectedPath;
+                this.ApplicationPath = selectedPath;
             }
         }
 
         private void AnalyzeSelectedFile()
         {
-            if (string.IsNullOrWhiteSpace(ApplicationPath))
+            if (string.IsNullOrWhiteSpace(this.ApplicationPath))
             {
-                ResetFileInfo();
+                this.ResetFileInfo();
                 return;
             }
 
             try
             {
                 string directoryPath;
-                if (File.Exists(ApplicationPath))
+                if (File.Exists(this.ApplicationPath))
                 {
-                    directoryPath = Path.GetDirectoryName(ApplicationPath) ?? "";
+                    directoryPath = Path.GetDirectoryName(this.ApplicationPath) ?? string.Empty;
                 }
-                else if (Directory.Exists(ApplicationPath))
+                else if (Directory.Exists(this.ApplicationPath))
                 {
-                    directoryPath = ApplicationPath;
+                    directoryPath = this.ApplicationPath;
                 }
                 else
                 {
-                    ResetFileInfo();
+                    this.ResetFileInfo();
                     return;
                 }
-                
-                if (string.IsNullOrEmpty(directoryPath)) 
+
+                if (string.IsNullOrEmpty(directoryPath))
                 {
-                    ResetFileInfo();
+                    this.ResetFileInfo();
                     return;
                 }
 
                 var dirInfo = new DirectoryInfo(directoryPath);
-                FolderName = dirInfo.Name;
-                SubfoldersIncluded = IncludeSubfolders ? "Yes" : "No";
+                this.FolderName = dirInfo.Name;
+                this.SubfoldersIncluded = this.IncludeSubfolders ? "Yes" : "No";
 
-                var searchOption = IncludeSubfolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-                
-                ExecutableFilesCount = dirInfo.GetFiles("*.exe", searchOption).Length.ToString();
-                LibraryFilesCount = dirInfo.GetFiles("*.dll", searchOption).Length.ToString();
+                var searchOption = this.IncludeSubfolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
-                _loggingService.LogInfo($"Folder analyzed: {FolderName}");
+                this.ExecutableFilesCount = dirInfo.GetFiles("*.exe", searchOption).Length.ToString();
+                this.LibraryFilesCount = dirInfo.GetFiles("*.dll", searchOption).Length.ToString();
+
+                this.loggingService.LogInfo($"Folder analyzed: {this.FolderName}");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Failed to analyze folder: {ex.Message}");
-                ResetFileInfo();
+                this.loggingService.LogError($"Failed to analyze folder: {ex.Message}");
+                this.ResetFileInfo();
             }
         }
 
         private void ResetFileInfo()
         {
-            FolderName = "N/A";
-            SubfoldersIncluded = "No";
-            ExecutableFilesCount = "0";
-            LibraryFilesCount = "0";
+            this.FolderName = "N/A";
+            this.SubfoldersIncluded = "No";
+            this.ExecutableFilesCount = "0";
+            this.LibraryFilesCount = "0";
         }
 
         private string FormatFileSize(long bytes)
@@ -315,6 +357,7 @@ namespace AppIntBlockerGUI.ViewModels
                 order++;
                 len = len / 1024;
             }
+
             return $"{len:0.##} {sizes[order]}";
         }
 
@@ -322,15 +365,18 @@ namespace AppIntBlockerGUI.ViewModels
         /// Validates operation name to prevent injection attacks and ensure safe rule names.
         /// AI-generated code: Enhanced input validation for security.
         /// </summary>
+        /// <returns></returns>
         private bool ValidateOperationName(string operationName)
         {
             if (string.IsNullOrWhiteSpace(operationName))
+            {
                 return true; // Empty is allowed, will be auto-generated
+            }
 
             // Check length
             if (operationName.Length > 100)
             {
-                StatusMessage = "Error: Operation name is too long (maximum 100 characters).";
+                this.StatusMessage = "Error: Operation name is too long (maximum 100 characters).";
                 return false;
             }
 
@@ -338,7 +384,7 @@ namespace AppIntBlockerGUI.ViewModels
             var validNameRegex = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_. -]+$");
             if (!validNameRegex.IsMatch(operationName))
             {
-                StatusMessage = "Error: Operation name contains invalid characters. Only letters, numbers, spaces, dots, hyphens, and underscores are allowed.";
+                this.StatusMessage = "Error: Operation name contains invalid characters. Only letters, numbers, spaces, dots, hyphens, and underscores are allowed.";
                 return false;
             }
 
@@ -349,7 +395,7 @@ namespace AppIntBlockerGUI.ViewModels
             {
                 if (lowerName.Contains(pattern))
                 {
-                    StatusMessage = $"Error: Operation name cannot contain '{pattern}'.";
+                    this.StatusMessage = $"Error: Operation name cannot contain '{pattern}'.";
                     return false;
                 }
             }
@@ -361,17 +407,20 @@ namespace AppIntBlockerGUI.ViewModels
         /// Validates excluded files patterns to prevent injection attacks.
         /// AI-generated code: Enhanced input validation for security.
         /// </summary>
+        /// <returns></returns>
         private bool ValidateExcludedFiles(List<string> excludedFiles)
         {
             foreach (var file in excludedFiles)
             {
                 if (string.IsNullOrWhiteSpace(file))
+                {
                     continue;
+                }
 
                 // Check length
                 if (file.Length > 255)
                 {
-                    StatusMessage = $"Error: Excluded file name is too long: '{file}' (maximum 255 characters).";
+                    this.StatusMessage = $"Error: Excluded file name is too long: '{file}' (maximum 255 characters).";
                     return false;
                 }
 
@@ -379,14 +428,14 @@ namespace AppIntBlockerGUI.ViewModels
                 var validFileRegex = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_. *-]+$");
                 if (!validFileRegex.IsMatch(file))
                 {
-                    StatusMessage = $"Error: Invalid character in excluded file pattern '{file}'.";
+                    this.StatusMessage = $"Error: Invalid character in excluded file pattern '{file}'.";
                     return false;
                 }
 
                 // Prevent malicious patterns
                 if (file.Contains("..") || file.Contains("/") || file.Contains("\\"))
                 {
-                    StatusMessage = $"Error: Excluded file pattern cannot contain path separators or traversal: '{file}'.";
+                    this.StatusMessage = $"Error: Excluded file pattern cannot contain path separators or traversal: '{file}'.";
                     return false;
                 }
             }
@@ -399,57 +448,57 @@ namespace AppIntBlockerGUI.ViewModels
         {
             if (!App.IsRunAsAdministrator())
             {
-                StatusMessage = "Error: Administrator privileges are required to block applications.";
+                this.StatusMessage = "Error: Administrator privileges are required to block applications.";
                 return;
             }
 
-            if (IsBlocking || string.IsNullOrWhiteSpace(ApplicationPath))
+            if (this.IsBlocking || string.IsNullOrWhiteSpace(this.ApplicationPath))
             {
                 return;
             }
 
-            if (!IsPathSafe(ApplicationPath))
+            if (!this.IsPathSafe(this.ApplicationPath))
             {
                 // IsPathSafe sets the status message
                 return;
             }
 
             // Validate operation name
-            if (!ValidateOperationName(OperationName))
+            if (!this.ValidateOperationName(this.OperationName))
             {
                 return;
             }
 
-            IsBlocking = true;
-            Progress = 0;
+            this.IsBlocking = true;
+            this.Progress = 0;
 
-            if (string.IsNullOrWhiteSpace(OperationName))
+            if (string.IsNullOrWhiteSpace(this.OperationName))
             {
-                OperationName = $"Block_{FolderName}_{DateTime.Now:HHmmss}";
+                this.OperationName = $"Block_{this.FolderName}_{DateTime.Now:HHmmss}";
             }
 
             try
             {
-                IsOperationInProgress = true;
-                CurrentOperationStatus = "Blocking application...";
-                
+                this.IsOperationInProgress = true;
+                this.CurrentOperationStatus = "Blocking application...";
+
                 var excludedKeywords = new List<string>();
-                if (UseExclusions)
+                if (this.UseExclusions)
                 {
-                    var keywords = ExcludedKeywords.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                    var keywords = this.ExcludedKeywords.Split(';', StringSplitOptions.RemoveEmptyEntries)
                                                    .Select(k => k.Trim())
                                                    .Where(k => !string.IsNullOrWhiteSpace(k));
-                    
+
                     // Enhanced keyword validation - more restrictive
                     var validKeywordRegex = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_.-]+$");
-                    
+
                     foreach (var keyword in keywords)
                     {
                         // Additional length check
                         if (keyword.Length > 50)
                         {
-                            StatusMessage = $"Error: Exclusion keyword is too long: '{keyword}' (maximum 50 characters).";
-                            IsBlocking = false;
+                            this.StatusMessage = $"Error: Exclusion keyword is too long: '{keyword}' (maximum 50 characters).";
+                            this.IsBlocking = false;
                             return;
                         }
 
@@ -459,79 +508,78 @@ namespace AppIntBlockerGUI.ViewModels
                         }
                         else
                         {
-                            StatusMessage = $"Error: Invalid character in exclusion keyword '{keyword}'. Only letters, numbers, dots, hyphens, and underscores are allowed.";
-                            IsBlocking = false;
+                            this.StatusMessage = $"Error: Invalid character in exclusion keyword '{keyword}'. Only letters, numbers, dots, hyphens, and underscores are allowed.";
+                            this.IsBlocking = false;
                             return;
                         }
                     }
                 }
 
                 var excludedFiles = new List<string>();
-                if (UseExclusions && !string.IsNullOrWhiteSpace(ExcludedFiles))
+                if (this.UseExclusions && !string.IsNullOrWhiteSpace(this.ExcludedFiles))
                 {
-                    var files = ExcludedFiles.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                    var files = this.ExcludedFiles.Split(';', StringSplitOptions.RemoveEmptyEntries)
                                             .Select(f => f.Trim())
                                             .Where(f => !string.IsNullOrWhiteSpace(f))
                                             .ToList();
 
                     // Validate excluded files
-                    if (!ValidateExcludedFiles(files))
+                    if (!this.ValidateExcludedFiles(files))
                     {
-                        IsBlocking = false;
+                        this.IsBlocking = false;
                         return;
                     }
 
                     excludedFiles.AddRange(files);
                 }
-                
-                await _firewallService.BlockApplicationFiles(
-                    ApplicationPath,
-                    IncludeExeFiles,
-                    IncludeDllFiles,
-                    IncludeSubfolders,
+
+                await this.firewallService.BlockApplicationFiles(
+                    this.ApplicationPath,
+                    this.IncludeExeFiles,
+                    this.IncludeDllFiles,
+                    this.IncludeSubfolders,
                     excludedKeywords,
                     excludedFiles,
-                    _loggingService,
-                    _cancellationTokenSource.Token
-                ).ConfigureAwait(false);
+                    this.loggingService,
+                    this.cancellationTokenSource.Token).ConfigureAwait(false);
 
-                CurrentOperationStatus = "Operation completed successfully";
-                _dialogService.ShowMessage($"Application '{FolderName}' has been blocked successfully.", "Success");
+                this.CurrentOperationStatus = "Operation completed successfully";
+                this.dialogService.ShowMessage($"Application '{this.FolderName}' has been blocked successfully.", "Success");
             }
             catch (Exception ex)
             {
-                CurrentOperationStatus = "Operation failed";
-                _loggingService.LogError($"Failed to block application: {ex.Message}");
-                _dialogService.ShowMessage($"Failed to block application: {ex.Message}", "Error");
+                this.CurrentOperationStatus = "Operation failed";
+                this.loggingService.LogError($"Failed to block application: {ex.Message}");
+                this.dialogService.ShowMessage($"Failed to block application: {ex.Message}", "Error");
             }
             finally
             {
-                IsOperationInProgress = false;
-                EstimatedTimeRemaining = "00:00";
+                this.IsOperationInProgress = false;
+                this.EstimatedTimeRemaining = "00:00";
             }
         }
 
         [RelayCommand]
         private void ClearLog()
         {
-            LogEntries.Clear();
-            InitializeTerminal();
-            _loggingService.LogInfo("Terminal cleared by user");
+            this.LogEntries.Clear();
+            this.InitializeTerminal();
+            this.loggingService.LogInfo("Terminal cleared by user");
         }
 
         partial void OnApplicationPathChanged(string value)
         {
-            AnalyzeSelectedFile();
+            this.AnalyzeSelectedFile();
         }
 
         partial void OnIncludeSubfoldersChanged(bool value)
         {
-            AnalyzeSelectedFile();
+            this.AnalyzeSelectedFile();
         }
 
         partial void OnOperationNameChanged(string value)
         {
-            OnPropertyChanged(nameof(FullRuleName));
+            this.OnPropertyChanged(nameof(this.FullRuleName));
         }
 
         [RelayCommand]
@@ -544,30 +592,33 @@ namespace AppIntBlockerGUI.ViewModels
         /// Validates if a path is safe to use, preventing path traversal attacks and access to system directories.
         /// AI-generated code: Enhanced security validation to prevent path traversal vulnerabilities.
         /// </summary>
+        /// <returns></returns>
         private bool IsPathSafe(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
-                return true; 
+            {
+                return true;
+            }
 
             try
             {
                 // Normalize the path to prevent traversal attacks
                 var fullPath = Path.GetFullPath(path);
-                
+
                 // Check for path traversal attempts (e.g., ../, ..\)
                 if (path.Contains("..") || path.Contains("./") || path.Contains(".\\"))
                 {
-                    CurrentOperationStatus = "Error: Path traversal attempts are not allowed.";
-                    _dialogService.ShowMessage(CurrentOperationStatus, "Security Warning");
+                    this.CurrentOperationStatus = "Error: Path traversal attempts are not allowed.";
+                    this.dialogService.ShowMessage(this.CurrentOperationStatus, "Security Warning");
                     return false;
                 }
-                
+
                 // Get system directories
                 var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 var systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
                 var programFilesDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
                 var programFilesX86Directory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-                
+
                 // Prevent access to critical system directories
                 var forbiddenDirectories = new[]
                 {
@@ -581,27 +632,28 @@ namespace AppIntBlockerGUI.ViewModels
 
                 foreach (var forbiddenDir in forbiddenDirectories)
                 {
-                    if (!string.IsNullOrEmpty(forbiddenDir) && 
+                    if (!string.IsNullOrEmpty(forbiddenDir) &&
                         fullPath.StartsWith(forbiddenDir, StringComparison.OrdinalIgnoreCase))
                     {
-                        CurrentOperationStatus = "Error: Blocking files in system directories is not permitted.";
-                        _dialogService.ShowMessage(CurrentOperationStatus, "Security Warning");
+                        this.CurrentOperationStatus = "Error: Blocking files in system directories is not permitted.";
+                        this.dialogService.ShowMessage(this.CurrentOperationStatus, "Security Warning");
                         return false;
                     }
                 }
-                
+
                 // Check if path exists and is accessible
                 if (File.Exists(fullPath))
                 {
                     var fileInfo = new FileInfo(fullPath);
+
                     // Additional check for critical system files
                     if (fileInfo.Extension.Equals(".sys", StringComparison.OrdinalIgnoreCase) ||
-                        fileInfo.Extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) && 
+                        (fileInfo.Extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) &&
                         fileInfo.DirectoryName != null &&
-                        fileInfo.DirectoryName.StartsWith(systemDirectory, StringComparison.OrdinalIgnoreCase))
+                        fileInfo.DirectoryName.StartsWith(systemDirectory, StringComparison.OrdinalIgnoreCase)))
                     {
-                        CurrentOperationStatus = "Error: Blocking system files is not permitted.";
-                        _dialogService.ShowMessage(CurrentOperationStatus, "Security Warning");
+                        this.CurrentOperationStatus = "Error: Blocking system files is not permitted.";
+                        this.dialogService.ShowMessage(this.CurrentOperationStatus, "Security Warning");
                         return false;
                     }
                 }
@@ -611,43 +663,43 @@ namespace AppIntBlockerGUI.ViewModels
                 }
                 else
                 {
-                    CurrentOperationStatus = "Error: The specified path does not exist.";
-                    _dialogService.ShowMessage(CurrentOperationStatus, "Validation Error");
+                    this.CurrentOperationStatus = "Error: The specified path does not exist.";
+                    this.dialogService.ShowMessage(this.CurrentOperationStatus, "Validation Error");
                     return false;
                 }
             }
             catch (ArgumentException)
             {
-                CurrentOperationStatus = "Error: The provided path contains invalid characters.";
-                _dialogService.ShowMessage(CurrentOperationStatus, "Validation Error");
+                this.CurrentOperationStatus = "Error: The provided path contains invalid characters.";
+                this.dialogService.ShowMessage(this.CurrentOperationStatus, "Validation Error");
                 return false;
             }
             catch (SecurityException)
             {
-                CurrentOperationStatus = "Error: You do not have permission to access the specified path.";
-                _dialogService.ShowMessage(CurrentOperationStatus, "Access Denied");
+                this.CurrentOperationStatus = "Error: You do not have permission to access the specified path.";
+                this.dialogService.ShowMessage(this.CurrentOperationStatus, "Access Denied");
                 return false;
             }
             catch (PathTooLongException)
             {
-                CurrentOperationStatus = "Error: The specified path is too long.";
-                _dialogService.ShowMessage(CurrentOperationStatus, "Validation Error");
+                this.CurrentOperationStatus = "Error: The specified path is too long.";
+                this.dialogService.ShowMessage(this.CurrentOperationStatus, "Validation Error");
                 return false;
             }
             catch (UnauthorizedAccessException)
             {
-                CurrentOperationStatus = "Error: Access to the path is denied.";
-                _dialogService.ShowMessage(CurrentOperationStatus, "Access Denied");
+                this.CurrentOperationStatus = "Error: Access to the path is denied.";
+                this.dialogService.ShowMessage(this.CurrentOperationStatus, "Access Denied");
                 return false;
             }
-            
+
             return true;
         }
 
         public void Dispose()
         {
-            _cancellationTokenSource.Dispose();
-            _loggingService.LogEntryAdded -= OnLogEntryAdded;
+            this.cancellationTokenSource.Dispose();
+            this.loggingService.LogEntryAdded -= this.OnLogEntryAdded;
         }
     }
-} 
+}

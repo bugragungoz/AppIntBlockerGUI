@@ -1,22 +1,28 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using AppIntBlockerGUI.Services;
-using AppIntBlockerGUI.Models;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.IO;
-using System;
-using System.Management.Automation;
+// <copyright file="ManageRulesViewModel.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.ViewModels
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.IO;
+    using System.Linq;
+    using System.Management.Automation;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using AppIntBlockerGUI.Models;
+    using AppIntBlockerGUI.Services;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+
     public partial class ManageRulesViewModel : ObservableObject, IDisposable
     {
-        private readonly IFirewallService _firewallService;
-        private readonly ILoggingService _loggingService;
-        private readonly IDialogService _dialogService;
+        private readonly IFirewallService firewallService;
+        private readonly ILoggingService loggingService;
+        private readonly IDialogService dialogService;
+        private CancellationTokenSource cancellationTokenSource = new();
 
         [ObservableProperty]
         private ObservableCollection<FirewallRuleModel> allRules = new();
@@ -37,6 +43,9 @@ namespace AppIntBlockerGUI.ViewModels
         private bool isLoading = false;
 
         [ObservableProperty]
+        private string loadingStatusText = "Loading...";
+
+        [ObservableProperty]
         private int totalRulesCount;
 
         [ObservableProperty]
@@ -53,14 +62,14 @@ namespace AppIntBlockerGUI.ViewModels
             ILoggingService loggingService,
             IDialogService dialogService)
         {
-            _firewallService = firewallService ?? throw new ArgumentNullException(nameof(firewallService));
-            _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
-            _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            this.firewallService = firewallService ?? throw new ArgumentNullException(nameof(firewallService));
+            this.loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
+            this.dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
             // Subscribe to logging events
-            _loggingService.LogEntryAdded += OnLogEntryAdded;
+            this.loggingService.LogEntryAdded += this.OnLogEntryAdded;
 
-            _loggingService.LogInfo("ManageRulesViewModel initialized - ready for manual refresh");
+            this.loggingService.LogInfo("ManageRulesViewModel initialized - ready for manual refresh");
 
             // Don't auto-refresh in constructor to prevent crashes
             // Refresh will be triggered when view becomes visible
@@ -68,12 +77,12 @@ namespace AppIntBlockerGUI.ViewModels
 
         partial void OnSearchFilterChanged(string value)
         {
-            FilterRules();
+            this.FilterRules();
         }
 
         partial void OnSelectedRuleChanged(FirewallRuleModel? value)
         {
-            HasSelectedRule = value != null;
+            this.HasSelectedRule = value != null;
         }
 
         private void OnLogEntryAdded(string logEntry)
@@ -81,109 +90,95 @@ namespace AppIntBlockerGUI.ViewModels
             // Update UI on main thread
             App.Current?.Dispatcher.Invoke(() =>
             {
-                OperationLog += logEntry + "\n";
-                
+                this.OperationLog += logEntry + "\n";
+
                 // Keep log from getting too long
-                var lines = OperationLog.Split('\n');
+                var lines = this.OperationLog.Split('\n');
                 if (lines.Length > 100)
                 {
-                    OperationLog = string.Join("\n", lines.Skip(lines.Length - 100));
+                    this.OperationLog = string.Join("\n", lines.Skip(lines.Length - 100));
                 }
             });
         }
 
         private void FilterRules()
         {
-            if (string.IsNullOrWhiteSpace(SearchFilter))
+            if (string.IsNullOrWhiteSpace(this.SearchFilter))
             {
-                FilteredFirewallRules = new ObservableCollection<FirewallRuleModel>(AllRules);
+                this.FilteredFirewallRules = new ObservableCollection<FirewallRuleModel>(this.AllRules);
             }
             else
             {
-                var filtered = AllRules.Where(rule =>
-                    rule.RuleName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
-                    rule.ApplicationName.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase) ||
-                    rule.Direction.Contains(SearchFilter, StringComparison.OrdinalIgnoreCase)
-                ).ToList();
+                var filtered = this.AllRules.Where(rule =>
+                    rule.RuleName.Contains(this.SearchFilter, StringComparison.OrdinalIgnoreCase) ||
+                    rule.ApplicationName.Contains(this.SearchFilter, StringComparison.OrdinalIgnoreCase) ||
+                    rule.Direction.Contains(this.SearchFilter, StringComparison.OrdinalIgnoreCase)).ToList();
 
-                FilteredFirewallRules = new ObservableCollection<FirewallRuleModel>(filtered);
+                this.FilteredFirewallRules = new ObservableCollection<FirewallRuleModel>(filtered);
             }
         }
 
         private void UpdateStatistics()
         {
-            TotalRulesCount = AllRules.Count;
-            InboundRulesCount = AllRules.Count(r => r.Direction.Equals("Inbound", StringComparison.OrdinalIgnoreCase));
-            OutboundRulesCount = AllRules.Count(r => r.Direction.Equals("Outbound", StringComparison.OrdinalIgnoreCase));
+            this.TotalRulesCount = this.AllRules.Count;
+            this.InboundRulesCount = this.AllRules.Count(r => r.Direction.Equals("Inbound", StringComparison.OrdinalIgnoreCase));
+            this.OutboundRulesCount = this.AllRules.Count(r => r.Direction.Equals("Outbound", StringComparison.OrdinalIgnoreCase));
         }
 
         // Removed GetAppIntBlockerRulesOnly() to eliminate duplication
         // FirewallService.GetExistingRules() already filters for AppIntBlocker rules
-
         [RelayCommand]
         public async Task RefreshRules()
         {
-            await RefreshRulesAsync();
+            await this.RefreshRulesAsync();
+        }
+
+        [RelayCommand]
+        private void CancelOperation()
+        {
+            if (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
+            {
+                cancellationTokenSource.Cancel();
+                loggingService.LogWarning("Operation canceled by user.");
+            }
         }
 
         private async Task RefreshRulesAsync()
         {
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource = new CancellationTokenSource();
+            await this.LoadRulesAsync();
+        }
+
+        private async Task LoadRulesAsync()
+        {
+            this.IsLoading = true;
+            this.AllRules.Clear();
+            this.loggingService.LogInfo("Loading firewall rules...");
+
             try
             {
-                IsLoading = true;
-                _loggingService.LogInfo("Refreshing AppIntBlocker firewall rules...");
-
-                // Run the rules gathering in background to prevent UI blocking
-                var rules = await Task.Run(async () =>
+                var loadedRules = await this.firewallService.GetAllFirewallRulesAsync(cancellationTokenSource.Token);
+                foreach (var rule in loadedRules.OrderBy(r => r.DisplayName))
                 {
-                    try
-                    {
-                        // Get AppIntBlocker rules using FirewallService (already filtered)
-                        var existingRuleNames = await _firewallService.GetExistingRulesAsync(_loggingService);
-                        
-                        var rulesList = new List<FirewallRuleModel>();
+                    this.AllRules.Add(rule);
+                }
 
-                        foreach (var ruleName in existingRuleNames)
-                        {
-                            try
-                            {
-                                // Parse rule information from name
-                                var rule = ParseRuleFromName(ruleName);
-                                if (rule != null)
-                                {
-                                    rulesList.Add(rule);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _loggingService.LogError($"Error parsing rule: {ruleName}", ex);
-                            }
-                        }
-
-                        return rulesList.OrderBy(r => r.ApplicationName).ThenBy(r => r.RuleName).ToList();
-                    }
-                    catch (Exception ex)
-                    {
-                        _loggingService.LogError("Background error refreshing firewall rules", ex);
-                        return new List<FirewallRuleModel>();
-                    }
-                });
-
-                // Update UI on main thread
-                AllRules = new ObservableCollection<FirewallRuleModel>(rules);
-                FilterRules();
-                UpdateStatistics();
-
-                _loggingService.LogInfo($"Successfully loaded {AllRules.Count} AppIntBlocker firewall rules");
+                this.loggingService.LogInfo($"Found {this.AllRules.Count} firewall rules.");
+            }
+            catch (OperationCanceledException)
+            {
+                loggingService.LogWarning("Rule refresh operation was canceled.");
+                dialogService.ShowMessage("Operation was canceled.", "Canceled");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error refreshing firewall rules", ex);
-                _dialogService.ShowMessage("Failed to refresh firewall rules. Check the log for details.", "Error");
+                this.loggingService.LogError("Error refreshing firewall rules", ex);
+                this.dialogService.ShowMessage("Failed to refresh firewall rules. Check the log for details.", "Error");
             }
             finally
             {
-                IsLoading = false;
+                this.IsLoading = false;
             }
         }
 
@@ -194,35 +189,35 @@ namespace AppIntBlockerGUI.ViewModels
                 // ROBUST PARSING with validation
                 if (string.IsNullOrWhiteSpace(ruleName))
                 {
-                    _loggingService.LogWarning("Cannot parse null or empty rule name");
+                    this.loggingService.LogWarning("Cannot parse null or empty rule name");
                     return null;
                 }
 
                 const string expectedPrefix = "AppBlocker Rule - ";
                 if (!ruleName.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    _loggingService.LogDebug($"Rule does not match expected format: {ruleName}");
+                    this.loggingService.LogDebug($"Rule does not match expected format: {ruleName}");
                     return null;
                 }
 
                 // Remove prefix
                 var nameWithoutPrefix = ruleName.Substring(expectedPrefix.Length);
-                
+
                 // Validate minimum length
                 if (nameWithoutPrefix.Length < 10) // Minimum reasonable length
                 {
-                    _loggingService.LogWarning($"Rule name too short after prefix removal: {ruleName}");
+                    this.loggingService.LogWarning($"Rule name too short after prefix removal: {ruleName}");
                     return null;
                 }
 
                 // Look for direction pattern at the end: " (Inbound)" or " (Outbound)"
                 var directionPattern = @"\s+\((Inbound|Outbound)\)$";
-                var directionMatch = System.Text.RegularExpressions.Regex.Match(nameWithoutPrefix, directionPattern, 
+                var directionMatch = System.Text.RegularExpressions.Regex.Match(nameWithoutPrefix, directionPattern,
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
                 if (!directionMatch.Success)
                 {
-                    _loggingService.LogWarning($"Could not parse direction from rule: {ruleName}");
+                    this.loggingService.LogWarning($"Could not parse direction from rule: {ruleName}");
                     return null;
                 }
 
@@ -231,10 +226,10 @@ namespace AppIntBlockerGUI.ViewModels
 
                 // Split by " - " to get application and file
                 var parts = nameWithoutDirection.Split(new[] { " - " }, 2, StringSplitOptions.None);
-                
+
                 if (parts.Length != 2)
                 {
-                    _loggingService.LogWarning($"Invalid rule format, expected 'App - File': {ruleName}");
+                    this.loggingService.LogWarning($"Invalid rule format, expected 'App - File': {ruleName}");
                     return null;
                 }
 
@@ -244,7 +239,7 @@ namespace AppIntBlockerGUI.ViewModels
                 // Validate components
                 if (string.IsNullOrWhiteSpace(applicationName) || string.IsNullOrWhiteSpace(fileName))
                 {
-                    _loggingService.LogWarning($"Empty application or file name in rule: {ruleName}");
+                    this.loggingService.LogWarning($"Empty application or file name in rule: {ruleName}");
                     return null;
                 }
 
@@ -260,7 +255,7 @@ namespace AppIntBlockerGUI.ViewModels
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Exception parsing rule name: {ruleName}", ex);
+                this.loggingService.LogError($"Exception parsing rule name: {ruleName}", ex);
                 return null;
             }
         }
@@ -268,99 +263,121 @@ namespace AppIntBlockerGUI.ViewModels
         [RelayCommand]
         private async Task RemoveSelectedRule()
         {
-            if (SelectedRule == null)
+            if (this.SelectedRule == null)
             {
-                _dialogService.ShowMessage("Please select a rule to remove.", "No Rule Selected");
+                this.dialogService.ShowMessage("Please select a rule to remove.", "No Rule Selected");
                 return;
             }
 
             var confirmMessage = $"Are you sure you want to remove the following rule?\n\n" +
-                               $"Rule: {SelectedRule.RuleName}\n" +
-                               $"Application: {SelectedRule.ApplicationName}\n" +
-                               $"Direction: {SelectedRule.Direction}\n\n" +
+                               $"Rule: {this.SelectedRule.RuleName}\n" +
+                               $"Application: {this.SelectedRule.ApplicationName}\n" +
+                               $"Direction: {this.SelectedRule.Direction}\n\n" +
                                $"Note: This will remove ONLY this specific rule.";
 
-            if (!_dialogService.ShowConfirmation(confirmMessage, "Confirm Single Rule Removal"))
+            if (!this.dialogService.ShowConfirmation(confirmMessage, "Confirm Single Rule Removal"))
             {
-                _loggingService.LogInfo("Single rule removal cancelled by user");
+                this.loggingService.LogInfo("Single rule removal cancelled by user");
                 return;
             }
 
-            var ruleToRemove = SelectedRule.RuleName; // Store before async operation
+            var ruleToRemove = this.SelectedRule.RuleName; // Store before async operation
 
+            cancellationTokenSource = new CancellationTokenSource();
             try
             {
-                _loggingService.LogInfo($"Removing single rule: {ruleToRemove}");
+                this.LoadingStatusText = $"Removing rule: {ruleToRemove}";
+                this.IsLoading = true;
+                this.loggingService.LogInfo($"Removing single rule: {ruleToRemove}");
 
                 // Run the removal operation in background to prevent UI blocking
-                var success = await Task.Run(async () => 
+                var success = await Task.Run(async () =>
                 {
                     try
                     {
-                        return await _firewallService.RemoveSingleRule(ruleToRemove, _loggingService);
+                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.loggingService, cancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        loggingService.LogWarning("Rule removal was canceled during background execution.");
+                        return false;
                     }
                     catch (Exception ex)
                     {
-                        _loggingService.LogError($"Background task error removing rule: {ruleToRemove}", ex);
+                        this.loggingService.LogError($"Background task error removing rule: {ruleToRemove}", ex);
                         return false;
                     }
                 });
 
                 if (success)
                 {
-                    _loggingService.LogInfo($"Successfully removed rule: {ruleToRemove}");
-                    await RefreshRulesAsync();
-                    _dialogService.ShowMessage($"Successfully removed rule:\n{ruleToRemove}", "Rule Removed");
+                    this.loggingService.LogInfo($"Successfully removed rule: {ruleToRemove}");
+                    await this.RefreshRulesAsync();
+                    this.dialogService.ShowMessage($"Successfully removed rule:\n{ruleToRemove}", "Rule Removed");
                 }
                 else
                 {
-                    _loggingService.LogError($"Failed to remove rule: {ruleToRemove}");
-                    _dialogService.ShowMessage("Failed to remove the selected rule. Check the log for details.", "Error");
+                    this.loggingService.LogError($"Failed to remove rule: {ruleToRemove}");
+                    this.dialogService.ShowMessage("Failed to remove the selected rule. Check the log for details.", "Error");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                loggingService.LogWarning("Rule removal operation was canceled.");
+                dialogService.ShowMessage("Operation was canceled.", "Canceled");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Error removing rule: {ruleToRemove}", ex);
-                _dialogService.ShowMessage("An error occurred while removing the rule. Check the log for details.", "Error");
+                this.loggingService.LogError($"Error removing rule: {ruleToRemove}", ex);
+                this.dialogService.ShowMessage("An error occurred while removing the rule. Check the log for details.", "Error");
+            }
+            finally
+            {
+                this.IsLoading = false;
             }
         }
 
         [RelayCommand]
         private async Task RemoveAllRules()
         {
-            if (AllRules.Count == 0)
+            if (this.AllRules.Count == 0)
             {
-                _dialogService.ShowMessage("No rules found to remove.", "No Rules");
+                this.dialogService.ShowMessage("No rules found to remove.", "No Rules");
                 return;
             }
 
-            var confirmMessage = $"This will remove ALL {AllRules.Count} AppIntBlocker firewall rules.\n\n" +
+            var confirmMessage = $"This will remove ALL {this.AllRules.Count} AppIntBlocker firewall rules.\n\n" +
                                "This action cannot be undone. Are you sure you want to continue?";
 
-            if (!_dialogService.ShowConfirmation(confirmMessage, "Confirm Remove All Rules"))
+            if (!this.dialogService.ShowConfirmation(confirmMessage, "Confirm Remove All Rules"))
             {
-                _loggingService.LogInfo("Remove all rules operation cancelled by user");
+                this.loggingService.LogInfo("Remove all rules operation cancelled by user");
                 return;
             }
 
+            cancellationTokenSource = new CancellationTokenSource();
             try
             {
-                _loggingService.LogInfo("Starting removal of all AppIntBlocker rules...");
+                this.LoadingStatusText = "Removing all AppIntBlocker rules...";
+                this.IsLoading = true;
+                this.loggingService.LogInfo("Starting removal of all AppIntBlocker rules...");
 
                 // Get unique application names
-                var applicationNames = AllRules.Select(r => r.ApplicationName).Distinct().ToList();
+                var applicationNames = this.AllRules.Select(r => r.ApplicationName).Distinct().ToList();
 
                 // Run removal operations in background
-                var (successCount, errorCount) = await Task.Run(async () =>
+                var(successCount, errorCount) = await Task.Run(async () =>
                 {
                     int success = 0;
                     int errors = 0;
 
                     foreach (var appName in applicationNames)
                     {
+                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                         try
                         {
-                            var result = await _firewallService.RemoveExistingRules(appName, _loggingService);
+                            var result = await this.firewallService.RemoveExistingRules(appName, this.loggingService, cancellationTokenSource.Token);
                             if (result)
                             {
                                 success++;
@@ -373,30 +390,39 @@ namespace AppIntBlockerGUI.ViewModels
                         catch (Exception ex)
                         {
                             errors++;
-                            _loggingService.LogError($"Error removing rules for {appName}", ex);
+                            this.loggingService.LogError($"Error removing rules for {appName}", ex);
                         }
                     }
 
                     return (success, errors);
                 });
 
-                _loggingService.LogInfo($"Remove all operation completed. Success: {successCount}, Errors: {errorCount}");
+                this.loggingService.LogInfo($"Remove all operation completed. Success: {successCount}, Errors: {errorCount}");
 
                 if (errorCount > 0)
                 {
-                    _dialogService.ShowMessage($"Completed with {errorCount} errors. Check the log for details.", "Partial Success");
+                    this.dialogService.ShowMessage($"Completed with {errorCount} errors. Check the log for details.", "Partial Success");
                 }
                 else
                 {
-                    _dialogService.ShowMessage("Successfully removed all AppIntBlocker rules.", "Success");
+                    this.dialogService.ShowMessage("Successfully removed all AppIntBlocker rules.", "Success");
                 }
 
-                await RefreshRulesAsync();
+                await this.RefreshRulesAsync();
+            }
+            catch (OperationCanceledException)
+            {
+                loggingService.LogWarning("Remove all rules operation was canceled.");
+                dialogService.ShowMessage("Operation was canceled.", "Canceled");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error during remove all rules operation", ex);
-                _dialogService.ShowMessage("An error occurred while removing rules. Check the log for details.", "Error");
+                this.loggingService.LogError("Error during remove all rules operation", ex);
+                this.dialogService.ShowMessage("An error occurred while removing rules. Check the log for details.", "Error");
+            }
+            finally
+            {
+                this.IsLoading = false;
             }
         }
 
@@ -405,9 +431,9 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                if (AllRules.Count == 0)
+                if (this.AllRules.Count == 0)
                 {
-                    _dialogService.ShowMessage("No rules to export.", "No Data");
+                    this.dialogService.ShowMessage("No rules to export.", "No Data");
                     return;
                 }
 
@@ -419,31 +445,31 @@ namespace AppIntBlockerGUI.ViewModels
                 {
                     "AppIntBlocker Firewall Rules Export",
                     $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                    $"Total Rules: {AllRules.Count}",
-                    "",
+                    $"Total Rules: {this.AllRules.Count}",
+                    string.Empty,
                     "Rules Details:",
-                    "".PadRight(80, '=')
+                    string.Empty.PadRight(80, '=')
                 };
 
-                foreach (var rule in AllRules.OrderBy(r => r.ApplicationName).ThenBy(r => r.RuleName))
+                foreach (var rule in this.AllRules.OrderBy(r => r.ApplicationName).ThenBy(r => r.RuleName))
                 {
                     exportContent.Add($"Rule Name: {rule.RuleName}");
                     exportContent.Add($"Application: {rule.ApplicationName}");
                     exportContent.Add($"Direction: {rule.Direction}");
                     exportContent.Add($"Status: {rule.Status}");
                     exportContent.Add($"Program: {rule.ProgramPath}");
-                    exportContent.Add("");
+                    exportContent.Add(string.Empty);
                 }
 
                 await File.WriteAllLinesAsync(filePath, exportContent);
 
-                _loggingService.LogInfo($"Rules exported to: {filePath}");
-                _dialogService.ShowMessage($"Rules successfully exported to:\n{filePath}", "Export Complete");
+                this.loggingService.LogInfo($"Rules exported to: {filePath}");
+                this.dialogService.ShowMessage($"Rules successfully exported to:\n{filePath}", "Export Complete");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error exporting rules", ex);
-                _dialogService.ShowMessage("Failed to export rules. Check the log for details.", "Export Error");
+                this.loggingService.LogError("Error exporting rules", ex);
+                this.dialogService.ShowMessage("Failed to export rules. Check the log for details.", "Export Error");
             }
         }
 
@@ -452,45 +478,54 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                _loggingService.LogInfo("Opening import file dialog...");
-                
+                this.loggingService.LogInfo("Opening import file dialog...");
+
                 // FIXED: Use dialog service
-                var fileName = _dialogService.OpenFileDialog(
+                var fileName = this.dialogService.OpenFileDialog(
                     "Import Firewall Rules",
                     "XML Files (*.xml)|*.xml|Text Files (*.txt)|*.txt|All Files (*.*)|*.*");
 
                 if (!string.IsNullOrEmpty(fileName))
                 {
-                    _loggingService.LogInfo($"Importing rules from: {fileName}");
-                    
+                    this.loggingService.LogInfo($"Importing rules from: {fileName}");
+
                     // For now, just log the import action
                     // Future implementation would parse and import the rules
-                    _dialogService.ShowMessage("Import feature coming soon!", "Import Rules");
-                    
-                    _loggingService.LogInfo("Import operation completed");
+                    this.dialogService.ShowMessage("Import feature coming soon!", "Import Rules");
+
+                    this.loggingService.LogInfo("Import operation completed");
                 }
                 else
                 {
-                    _loggingService.LogInfo("Import operation cancelled by user");
+                    this.loggingService.LogInfo("Import operation cancelled by user");
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error importing rules", ex);
-                _dialogService.ShowError("Failed to import rules. Check the log for details.");
+                this.loggingService.LogError("Error importing rules", ex);
+                this.dialogService.ShowError("Failed to import rules. Check the log for details.");
             }
         }
 
         [RelayCommand]
         private void ClearLog()
         {
-            OperationLog = string.Empty;
-            _loggingService.LogInfo("Operation log cleared by user");
+            this.OperationLog = string.Empty;
+            this.loggingService.LogInfo("Operation log cleared by user");
         }
 
         public void Dispose()
         {
-            _loggingService.LogEntryAdded -= OnLogEntryAdded;
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.cancellationTokenSource.Dispose();
+            }
         }
     }
-} 
+}

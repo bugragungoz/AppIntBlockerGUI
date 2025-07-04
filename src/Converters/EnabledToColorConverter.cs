@@ -1,10 +1,14 @@
-using System;
-using System.Globalization;
-using System.Windows.Data;
-using System.Windows.Media;
+// <copyright file="EnabledToColorConverter.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows.Data;
+    using System.Windows.Media;
+
     public class EnabledToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -16,7 +20,7 @@ namespace AppIntBlockerGUI.Converters
 
             if (value is string enabledText)
             {
-                return enabledText.Equals("True", StringComparison.OrdinalIgnoreCase) || 
+                return enabledText.Equals("True", StringComparison.OrdinalIgnoreCase) ||
                        enabledText.Equals("Enabled", StringComparison.OrdinalIgnoreCase)
                     ? Brushes.LightGreen : Brushes.Orange;
             }
@@ -29,4 +33,4 @@ namespace AppIntBlockerGUI.Converters
             throw new NotImplementedException();
         }
     }
-} 
+}

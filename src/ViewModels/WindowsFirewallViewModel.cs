@@ -1,25 +1,29 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Data;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using AppIntBlockerGUI.Services;
-using AppIntBlockerGUI.Models;
-using System.Management.Automation;
-using System.Diagnostics;
+// <copyright file="WindowsFirewallViewModel.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.ViewModels
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Management.Automation;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Windows.Data;
+    using AppIntBlockerGUI.Models;
+    using AppIntBlockerGUI.Services;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+
     public partial class WindowsFirewallViewModel : ObservableObject
     {
-        private readonly IFirewallService _firewallService;
-        private readonly IDialogService _dialogService;
-        private readonly ILoggingService _loggingService;
+        private readonly IFirewallService firewallService;
+        private readonly IDialogService dialogService;
+        private readonly ILoggingService loggingService;
 
         [ObservableProperty]
         private ObservableCollection<FirewallRuleModel> allRules = new();
@@ -60,54 +64,57 @@ namespace AppIntBlockerGUI.ViewModels
         [ObservableProperty]
         private DateTime lastRefreshTime = DateTime.Now;
 
-        public WindowsFirewallViewModel()
+        public WindowsFirewallViewModel(IFirewallService firewallService, IDialogService dialogService, ILoggingService loggingService)
         {
-            _firewallService = new FirewallService();
-            _dialogService = new DialogService();
-            _loggingService = new LoggingService();
+            this.firewallService = firewallService;
+            this.dialogService = dialogService;
+            this.loggingService = loggingService;
 
             // Initialize filtered view
-            FilteredRules = CollectionViewSource.GetDefaultView(AllRules);
-            FilteredRules.Filter = ApplyFilters;
+            this.FilteredRules = CollectionViewSource.GetDefaultView(this.AllRules);
+            this.FilteredRules.Filter = this.ApplyFilters;
 
             // Load rules on initialization
-            _ = InitializeAsync();
+            _ = this.InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            StatusMessage = "Initializing firewall rules...";
-            await LoadFirewallRulesAsync();
+            this.StatusMessage = "Initializing firewall rules...";
+            await this.LoadFirewallRulesAsync();
         }
 
         partial void OnSearchTextChanged(string value)
         {
-            FilteredRules?.Refresh();
+            this.FilteredRules?.Refresh();
         }
 
         partial void OnSelectedDirectionChanged(string value)
         {
-            FilteredRules?.Refresh();
+            this.FilteredRules?.Refresh();
         }
 
         partial void OnSelectedActionChanged(string value)
         {
-            FilteredRules?.Refresh();
+            this.FilteredRules?.Refresh();
         }
 
         partial void OnSelectedSourceChanged(string value)
         {
-            FilteredRules?.Refresh();
+            this.FilteredRules?.Refresh();
         }
 
         private bool ApplyFilters(object item)
         {
-            if (item is not FirewallRuleModel rule) return false;
+            if (item is not FirewallRuleModel rule)
+            {
+                return false;
+            }
 
             // Search text filter
-            if (!string.IsNullOrEmpty(SearchText))
+            if (!string.IsNullOrEmpty(this.SearchText))
             {
-                var searchLower = SearchText.ToLower();
+                var searchLower = this.SearchText.ToLower();
                 if (!rule.DisplayName.ToLower().Contains(searchLower) &&
                     !rule.ProgramPath.ToLower().Contains(searchLower) &&
                     !rule.Description.ToLower().Contains(searchLower))
@@ -117,22 +124,22 @@ namespace AppIntBlockerGUI.ViewModels
             }
 
             // Direction filter
-            if (SelectedDirection != "All" && rule.Direction != SelectedDirection)
+            if (this.SelectedDirection != "All" && rule.Direction != this.SelectedDirection)
             {
                 return false;
             }
 
             // Action filter
-            if (SelectedAction != "All" && rule.Action != SelectedAction)
+            if (this.SelectedAction != "All" && rule.Action != this.SelectedAction)
             {
                 return false;
             }
 
             // Source filter
-            if (SelectedSource != "All")
+            if (this.SelectedSource != "All")
             {
                 var ruleType = rule.RuleType;
-                if (SelectedSource != ruleType)
+                if (this.SelectedSource != ruleType)
                 {
                     return false;
                 }
@@ -144,50 +151,50 @@ namespace AppIntBlockerGUI.ViewModels
         [RelayCommand]
         private async Task Refresh()
         {
-            await LoadFirewallRulesAsync();
+            await this.LoadFirewallRulesAsync();
         }
 
         private async Task LoadFirewallRulesAsync()
         {
             try
             {
-                StatusMessage = "Loading firewall rules...";
-                _loggingService.LogInfo("Loading all Windows Firewall rules...");
+                this.StatusMessage = "Loading firewall rules...";
+                this.loggingService.LogInfo("Loading all Windows Firewall rules...");
 
                 var rules = await Task.Run(async () =>
                 {
                     try
                     {
-                        return await GetAllFirewallRulesAsync();
+                        return await this.GetAllFirewallRulesAsync();
                     }
                     catch (Exception ex)
                     {
-                        _loggingService.LogError("Background error loading firewall rules", ex);
+                        this.loggingService.LogError("Background error loading firewall rules", ex);
                         return new List<FirewallRuleModel>();
                     }
                 });
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    AllRules.Clear();
+                    this.AllRules.Clear();
                     foreach (var rule in rules.OrderBy(r => r.DisplayName))
                     {
-                        AllRules.Add(rule);
+                        this.AllRules.Add(rule);
                     }
 
-                    UpdateStatistics();
-                    FilteredRules?.Refresh();
-                    LastRefreshTime = DateTime.Now;
-                    StatusMessage = $"Loaded {TotalRules} firewall rules";
+                    this.UpdateStatistics();
+                    this.FilteredRules?.Refresh();
+                    this.LastRefreshTime = DateTime.Now;
+                    this.StatusMessage = $"Loaded {this.TotalRules} firewall rules";
                 });
 
-                _loggingService.LogInfo($"Successfully loaded {TotalRules} firewall rules, {AppIntBlockerRules} created by AppIntBlocker");
+                this.loggingService.LogInfo($"Successfully loaded {this.TotalRules} firewall rules, {this.AppIntBlockerRules} created by AppIntBlocker");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error loading firewall rules", ex);
-                StatusMessage = "Error loading firewall rules";
-                _dialogService.ShowMessage("Failed to load firewall rules. Check the log for details.", "Error");
+                this.loggingService.LogError("Error loading firewall rules", ex);
+                this.StatusMessage = "Error loading firewall rules";
+                this.dialogService.ShowMessage("Failed to load firewall rules. Check the log for details.", "Error");
             }
         }
 
@@ -213,14 +220,14 @@ namespace AppIntBlockerGUI.ViewModels
 
                             // Basic properties
                             rule.DisplayName = psObject.Properties["DisplayName"]?.Value?.ToString() ?? "Unknown";
-                            rule.RuleName = psObject.Properties["Name"]?.Value?.ToString() ?? "";
-                            rule.Direction = psObject.Properties["Direction"]?.Value?.ToString() ?? "";
-                            rule.Action = psObject.Properties["Action"]?.Value?.ToString() ?? "";
-                            rule.Protocol = psObject.Properties["Protocol"]?.Value?.ToString() ?? "";
-                            rule.Profile = psObject.Properties["Profile"]?.Value?.ToString() ?? "";
-                            rule.Description = psObject.Properties["Description"]?.Value?.ToString() ?? "";
-                            rule.Group = psObject.Properties["Group"]?.Value?.ToString() ?? "";
-                            
+                            rule.RuleName = psObject.Properties["Name"]?.Value?.ToString() ?? string.Empty;
+                            rule.Direction = psObject.Properties["Direction"]?.Value?.ToString() ?? string.Empty;
+                            rule.Action = psObject.Properties["Action"]?.Value?.ToString() ?? string.Empty;
+                            rule.Protocol = psObject.Properties["Protocol"]?.Value?.ToString() ?? string.Empty;
+                            rule.Profile = psObject.Properties["Profile"]?.Value?.ToString() ?? string.Empty;
+                            rule.Description = psObject.Properties["Description"]?.Value?.ToString() ?? string.Empty;
+                            rule.Group = psObject.Properties["Group"]?.Value?.ToString() ?? string.Empty;
+
                             // Enabled status
                             if (bool.TryParse(psObject.Properties["Enabled"]?.Value?.ToString(), out bool enabled))
                             {
@@ -246,7 +253,7 @@ namespace AppIntBlockerGUI.ViewModels
                                     if (appResults.Any())
                                     {
                                         var appFilter = appResults.First();
-                                        rule.ProgramPath = appFilter.Properties["Program"]?.Value?.ToString() ?? "";
+                                        rule.ProgramPath = appFilter.Properties["Program"]?.Value?.ToString() ?? string.Empty;
                                     }
                                 }
                             }
@@ -268,9 +275,9 @@ namespace AppIntBlockerGUI.ViewModels
                                     if (portResults.Any())
                                     {
                                         var portFilter = portResults.First();
-                                        rule.LocalPort = portFilter.Properties["LocalPort"]?.Value?.ToString() ?? "";
-                                        rule.RemotePort = portFilter.Properties["RemotePort"]?.Value?.ToString() ?? "";
-                                        
+                                        rule.LocalPort = portFilter.Properties["LocalPort"]?.Value?.ToString() ?? string.Empty;
+                                        rule.RemotePort = portFilter.Properties["RemotePort"]?.Value?.ToString() ?? string.Empty;
+
                                         // Override protocol if available
                                         var protocol = portFilter.Properties["Protocol"]?.Value?.ToString();
                                         if (!string.IsNullOrEmpty(protocol))
@@ -289,17 +296,17 @@ namespace AppIntBlockerGUI.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            _loggingService.LogWarning($"Error processing individual firewall rule: {ex.Message}");
+                            this.loggingService.LogWarning($"Error processing individual firewall rule: {ex.Message}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error getting firewall rules with PowerShell", ex);
-                
+                this.loggingService.LogError("Error getting firewall rules with PowerShell", ex);
+
                 // Try netsh fallback
-                return await GetFirewallRulesWithNetshAsync();
+                return await this.GetFirewallRulesWithNetshAsync();
             }
 
             return rules;
@@ -311,7 +318,7 @@ namespace AppIntBlockerGUI.ViewModels
 
             try
             {
-                _loggingService.LogInfo("Using netsh fallback to get firewall rules...");
+                this.loggingService.LogInfo("Using netsh fallback to get firewall rules...");
 
                 var processInfo = new ProcessStartInfo
                 {
@@ -386,11 +393,11 @@ namespace AppIntBlockerGUI.ViewModels
                     }
                 }
 
-                _loggingService.LogInfo($"Loaded {rules.Count} firewall rules using netsh fallback");
+                this.loggingService.LogInfo($"Loaded {rules.Count} firewall rules using netsh fallback");
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("netsh fallback also failed", ex);
+                this.loggingService.LogError("netsh fallback also failed", ex);
             }
 
             return rules;
@@ -398,10 +405,10 @@ namespace AppIntBlockerGUI.ViewModels
 
         private void UpdateStatistics()
         {
-            TotalRules = AllRules.Count;
-            InboundRules = AllRules.Count(r => r.Direction.Equals("Inbound", StringComparison.OrdinalIgnoreCase));
-            OutboundRules = AllRules.Count(r => r.Direction.Equals("Outbound", StringComparison.OrdinalIgnoreCase));
-            AppIntBlockerRules = AllRules.Count(r => r.IsAppIntBlockerRule);
+            this.TotalRules = this.AllRules.Count;
+            this.InboundRules = this.AllRules.Count(r => r.Direction.Equals("Inbound", StringComparison.OrdinalIgnoreCase));
+            this.OutboundRules = this.AllRules.Count(r => r.Direction.Equals("Outbound", StringComparison.OrdinalIgnoreCase));
+            this.AppIntBlockerRules = this.AllRules.Count(r => r.IsAppIntBlockerRule);
         }
 
         [RelayCommand]
@@ -409,8 +416,8 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                StatusMessage = "Opening Windows Firewall Console...";
-                _loggingService.LogInfo("Opening Windows Firewall Console (wf.msc)");
+                this.StatusMessage = "Opening Windows Firewall Console...";
+                this.loggingService.LogInfo("Opening Windows Firewall Console (wf.msc)");
 
                 Process.Start(new ProcessStartInfo
                 {
@@ -418,25 +425,28 @@ namespace AppIntBlockerGUI.ViewModels
                     UseShellExecute = true
                 });
 
-                StatusMessage = "Windows Firewall Console opened";
+                this.StatusMessage = "Windows Firewall Console opened";
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error opening Windows Firewall Console", ex);
-                StatusMessage = "Error opening firewall console";
-                _dialogService.ShowMessage("Failed to open Windows Firewall Console. Make sure you have administrator privileges.", "Error");
+                this.loggingService.LogError("Error opening Windows Firewall Console", ex);
+                this.StatusMessage = "Error opening firewall console";
+                this.dialogService.ShowMessage("Failed to open Windows Firewall Console. Make sure you have administrator privileges.", "Error");
             }
         }
 
         [RelayCommand]
         private async Task ToggleRule(FirewallRuleModel rule)
         {
-            if (rule == null) return;
+            if (rule == null)
+            {
+                return;
+            }
 
             try
             {
-                StatusMessage = $"Toggling rule: {rule.DisplayName}";
-                _loggingService.LogInfo($"Toggling firewall rule: {rule.DisplayName} (Currently: {rule.Status})");
+                this.StatusMessage = $"Toggling rule: {rule.DisplayName}";
+                this.loggingService.LogInfo($"Toggling firewall rule: {rule.DisplayName} (Currently: {rule.Status})");
 
                 var newState = !rule.Enabled;
                 var action = newState ? "enable" : "disable";
@@ -476,27 +486,30 @@ namespace AppIntBlockerGUI.ViewModels
                     rule.Enabled = newState;
                     rule.IsEnabled = newState;
                     rule.Status = newState ? "Enabled" : "Disabled";
-                    StatusMessage = $"Rule {action}d successfully";
-                    FilteredRules?.Refresh();
+                    this.StatusMessage = $"Rule {action}d successfully";
+                    this.FilteredRules?.Refresh();
                 }
                 else
                 {
-                    StatusMessage = $"Failed to {action} rule";
-                    _dialogService.ShowMessage($"Failed to {action} the firewall rule. Check the log for details.", "Error");
+                    this.StatusMessage = $"Failed to {action} rule";
+                    this.dialogService.ShowMessage($"Failed to {action} the firewall rule. Check the log for details.", "Error");
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Error toggling firewall rule: {rule.DisplayName}", ex);
-                StatusMessage = "Error toggling rule";
-                _dialogService.ShowMessage("An error occurred while toggling the rule. Check the log for details.", "Error");
+                this.loggingService.LogError($"Error toggling firewall rule: {rule.DisplayName}", ex);
+                this.StatusMessage = "Error toggling rule";
+                this.dialogService.ShowMessage("An error occurred while toggling the rule. Check the log for details.", "Error");
             }
         }
 
         [RelayCommand]
         private async Task DeleteRule(FirewallRuleModel rule)
         {
-            if (rule == null) return;
+            if (rule == null)
+            {
+                return;
+            }
 
             try
             {
@@ -507,13 +520,13 @@ namespace AppIntBlockerGUI.ViewModels
                                    $"• Status: {rule.Status}\n\n" +
                                    $"This action cannot be undone. Continue?";
 
-                if (!_dialogService.ShowConfirmation(confirmMessage, "Delete Firewall Rule"))
+                if (!this.dialogService.ShowConfirmation(confirmMessage, "Delete Firewall Rule"))
                 {
                     return;
                 }
 
-                StatusMessage = $"Deleting rule: {rule.DisplayName}";
-                _loggingService.LogInfo($"Deleting firewall rule: {rule.DisplayName}");
+                this.StatusMessage = $"Deleting rule: {rule.DisplayName}";
+                this.loggingService.LogInfo($"Deleting firewall rule: {rule.DisplayName}");
 
                 var success = await Task.Run(async () =>
                 {
@@ -547,22 +560,22 @@ namespace AppIntBlockerGUI.ViewModels
 
                 if (success)
                 {
-                    AllRules.Remove(rule);
-                    UpdateStatistics();
-                    StatusMessage = "Rule deleted successfully";
-                    _dialogService.ShowMessage("Firewall rule deleted successfully.", "Rule Deleted");
+                    this.AllRules.Remove(rule);
+                    this.UpdateStatistics();
+                    this.StatusMessage = "Rule deleted successfully";
+                    this.dialogService.ShowMessage("Firewall rule deleted successfully.", "Rule Deleted");
                 }
                 else
                 {
-                    StatusMessage = "Failed to delete rule";
-                    _dialogService.ShowMessage("Failed to delete the firewall rule. Check the log for details.", "Error");
+                    this.StatusMessage = "Failed to delete rule";
+                    this.dialogService.ShowMessage("Failed to delete the firewall rule. Check the log for details.", "Error");
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError($"Error deleting firewall rule: {rule.DisplayName}", ex);
-                StatusMessage = "Error deleting rule";
-                _dialogService.ShowMessage("An error occurred while deleting the rule. Check the log for details.", "Error");
+                this.loggingService.LogError($"Error deleting firewall rule: {rule.DisplayName}", ex);
+                this.StatusMessage = "Error deleting rule";
+                this.dialogService.ShowMessage("An error occurred while deleting the rule. Check the log for details.", "Error");
             }
         }
 
@@ -570,13 +583,16 @@ namespace AppIntBlockerGUI.ViewModels
         /// Securely escapes arguments for netsh commands to prevent command injection.
         /// AI-generated code: This method implements proper escaping to prevent security vulnerabilities.
         /// </summary>
+        /// <returns></returns>
         private static string EscapeNetshArgument(string argument)
         {
             if (string.IsNullOrEmpty(argument))
+            {
                 return "\"\"";
-                
+            }
+
             // Escape quotes by doubling them and wrap in quotes
             return "\"" + argument.Replace("\"", "\"\"") + "\"";
         }
     }
-} 
+}
