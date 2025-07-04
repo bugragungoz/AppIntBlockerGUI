@@ -43,6 +43,7 @@ namespace AppIntBlockerGUI
                     services.AddSingleton<ISystemRestoreService, SystemRestoreService>();
                     services.AddSingleton<IFirewallService, FirewallService>();
                     services.AddSingleton<SettingsService>();
+                    services.AddSingleton<ILoggingService, LoggingService>();
                     services.AddSingleton<LoggingService>();
 
                     services.AddSingleton<MainWindowViewModel>();
@@ -84,6 +85,13 @@ namespace AppIntBlockerGUI
                 .Build();
 
             ServiceProvider = AppHost.Services;
+
+            // Subscribe to unhandled exception events as early as possible so that we can surface
+            // any unexpected failures to the user instead of silently terminating the elevated
+            // instance and leaving the impression that the application did not start.
+            this.DispatcherUnhandledException += this.Application_DispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += this.CurrentDomain_UnhandledException;
+            TaskScheduler.UnobservedTaskException += this.TaskScheduler_UnobservedTaskException;
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -97,6 +105,10 @@ namespace AppIntBlockerGUI
                 if (restart)
                 {
                     RestartAsAdministrator();
+                }
+                else
+                {
+                    dialogService.ShowWarning("Operation cancelled. The application will now exit.", "Operation Cancelled");
                 }
                 Current.Shutdown();
                 return;
@@ -119,6 +131,28 @@ namespace AppIntBlockerGUI
             logger?.LogCritical(e.Exception, "An unhandled exception occurred");
             MessageBox.Show($"An unhandled exception occurred: {e.Exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
+            Current.Shutdown();
+        }
+
+        private void CurrentDomain_UnhandledException(object? sender, UnhandledExceptionEventArgs e)
+        {
+            var exception = e.ExceptionObject as Exception;
+            var logger = ServiceProvider?.GetRequiredService<ILogger<App>>();
+            logger?.LogCritical(exception, "An unhandled domain exception occurred");
+
+            // Attempt to show a user-friendly message before we terminate.
+            MessageBox.Show($"An unhandled exception occurred: {exception?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Current.Shutdown();
+        }
+
+        private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            var exception = e.Exception;
+            var logger = ServiceProvider?.GetRequiredService<ILogger<App>>();
+            logger?.LogCritical(exception, "An unhandled task exception occurred");
+
+            // Attempt to show a user-friendly message before we terminate.
+            MessageBox.Show($"An unhandled task exception occurred: {exception?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Current.Shutdown();
         }
 
@@ -149,7 +183,26 @@ namespace AppIntBlockerGUI
             {
                 var logger = ServiceProvider?.GetRequiredService<ILogger<App>>();
                 logger?.LogError(ex, "Failed to restart application as administrator.");
+
+                // Use the themed dialog service instead of the default message box so the look & feel
+                // is consistent across all user interactions.
+                var dialogService = ServiceProvider?.GetService<IDialogService>();
+
+                // Native error code 1223 == ERROR_CANCELLED (operation cancelled by the user)
+                if (ex is System.ComponentModel.Win32Exception win32Ex && win32Ex.NativeErrorCode == 1223)
+                {
+                    dialogService?.ShowWarning("Operation cancelled. The application will now exit.", "Operation Cancelled");
+                }
+                else
+                {
+                    dialogService?.ShowError("Failed to restart the application with administrator privileges.", "Error");
+                }
+
+                if (dialogService == null)
+                {
+                    // Fallback in the rare case DI container is not yet ready
                 MessageBox.Show("Failed to restart the application with administrator privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
             Current.Shutdown();
         }
