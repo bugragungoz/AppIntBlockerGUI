@@ -95,7 +95,18 @@ AppIntBlockerGUI/
 │       ├── Converters/            # Value converters
 │       └── Resources/             # Themes and resources
 ├── docs/                          # Documentation
-├── CHANGELOG.md                   # Version history
+│   ├── api.md
+│   ├── bug_fixes_applied.md
+│   ├── changelog.md
+│   ├── code_structure_analysis.md
+│   ├── github_pages_setup_report.md
+│   ├── index.md
+│   ├── installation.md
+│   ├── roadmap.md
+│   └── security.md
+├── .gitignore
+├── CHANGELOG.md
+├── LICENSE
 └── README.md
 ```
 

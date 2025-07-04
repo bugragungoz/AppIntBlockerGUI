@@ -1,10 +1,14 @@
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
+// <copyright file="InvertedBooleanToVisibilityConverter.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
 namespace AppIntBlockerGUI.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows;
+    using System.Windows.Data;
+
     public class InvertedBooleanToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -13,6 +17,7 @@ namespace AppIntBlockerGUI.Converters
             {
                 return b ? Visibility.Collapsed : Visibility.Visible;
             }
+
             return Visibility.Collapsed;
         }
 
@@ -21,4 +26,4 @@ namespace AppIntBlockerGUI.Converters
             throw new NotImplementedException();
         }
     }
-} 
+}
