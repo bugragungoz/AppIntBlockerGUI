@@ -43,6 +43,9 @@ namespace AppIntBlockerGUI.ViewModels
         private bool isLoading = false;
 
         [ObservableProperty]
+        private string loadingStatusText = "Loading...";
+
+        [ObservableProperty]
         private int totalRulesCount;
 
         [ObservableProperty]
@@ -145,6 +148,7 @@ namespace AppIntBlockerGUI.ViewModels
             _cancellationTokenSource = new CancellationTokenSource();
             try
             {
+                this.LoadingStatusText = "Refreshing firewall rules...";
                 this.IsLoading = true;
                 this.loggingService.LogInfo("Refreshing AppIntBlocker firewall rules...");
 
@@ -316,6 +320,8 @@ namespace AppIntBlockerGUI.ViewModels
             _cancellationTokenSource = new CancellationTokenSource();
             try
             {
+                this.LoadingStatusText = $"Removing rule: {ruleToRemove}";
+                this.IsLoading = true;
                 this.loggingService.LogInfo($"Removing single rule: {ruleToRemove}");
 
                 // Run the removal operation in background to prevent UI blocking
@@ -359,6 +365,10 @@ namespace AppIntBlockerGUI.ViewModels
                 this.loggingService.LogError($"Error removing rule: {ruleToRemove}", ex);
                 this.dialogService.ShowMessage("An error occurred while removing the rule. Check the log for details.", "Error");
             }
+            finally
+            {
+                this.IsLoading = false;
+            }
         }
 
         [RelayCommand]
@@ -382,6 +392,8 @@ namespace AppIntBlockerGUI.ViewModels
             _cancellationTokenSource = new CancellationTokenSource();
             try
             {
+                this.LoadingStatusText = "Removing all AppIntBlocker rules...";
+                this.IsLoading = true;
                 this.loggingService.LogInfo("Starting removal of all AppIntBlocker rules...");
 
                 // Get unique application names
@@ -441,6 +453,10 @@ namespace AppIntBlockerGUI.ViewModels
             {
                 this.loggingService.LogError("Error during remove all rules operation", ex);
                 this.dialogService.ShowMessage("An error occurred while removing rules. Check the log for details.", "Error");
+            }
+            finally
+            {
+                this.IsLoading = false;
             }
         }
 

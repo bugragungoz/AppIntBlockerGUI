@@ -91,6 +91,14 @@
                         MinWidth="140"
                         Margin="0,0,10,0"/>
                 
+                <Button Content="❌ Cancel Operation"
+                        Command="{Binding CancelOperationCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        Background="#e74a35"
+                        MinWidth="140"
+                        Margin="0,0,10,0"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                
                 <Button Content="📤 Export List"
                         Command="{Binding ExportRulesCommand}"
                         Style="{StaticResource ModernButtonStyle}"
@@ -209,21 +217,16 @@
                 Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
                 CornerRadius="8">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="🔄 Loading firewall rules..." 
+                <TextBlock Text="{Binding LoadingStatusText}" 
                            Foreground="#eebb88" 
                            FontSize="18" 
                            FontWeight="Bold"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Scanning ~22,000+ rules to filter AppIntBlocker rules..." 
+                <TextBlock Text="This may take a moment depending on the operation..." 
                            Foreground="#a8a29c" 
                            FontSize="12" 
                            HorizontalAlignment="Center" 
                            Margin="0,10,0,0"/>
-                <TextBlock Text="This may take up to 5 seconds..." 
-                           Foreground="#a8a29c" 
-                           FontSize="11" 
-                           HorizontalAlignment="Center" 
-                           Margin="0,5,0,0"/>
             </StackPanel>
         </Border>
     </Grid>
