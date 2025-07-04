@@ -201,7 +201,7 @@ namespace AppIntBlockerGUI
                 if (dialogService == null)
                 {
                     // Fallback in the rare case DI container is not yet ready
-                    MessageBox.Show("Failed to restart the application with administrator privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Failed to restart the application with administrator privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             Current.Shutdown();
