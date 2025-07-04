@@ -1,0 +1,67 @@
+title: AppIntBlockerGUI Documentation
+description: Professional Windows Firewall Management with Modern UI
+url: "https://bugragungoz.github.io"
+baseurl: "/AppIntBlockerGUI"
+
+# Theme
+theme: minima
+# remote_theme: pages-themes/cayman@v0.2.0
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Navigation
+navigation:
+  - title: Home
+    url: /
+  - title: Installation
+    url: /installation/
+  - title: API Documentation
+    url: /api/
+  - title: Security
+    url: /security/
+  - title: Roadmap
+    url: /roadmap/
+  - title: Changelog
+    url: /changelog/
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# SEO
+author:
+  name: bugragungoz
+  email: 
+
+social:
+  name: AppIntBlockerGUI
+  links:
+    - https://github.com/bugragungoz/AppIntBlockerGUI
+
+# GitHub
+github:
+  repository_name: AppIntBlockerGUI
+  repository_url: https://github.com/bugragungoz/AppIntBlockerGUI
+  zip_url: https://github.com/bugragungoz/AppIntBlockerGUI/archive/main.zip
+  tar_url: https://github.com/bugragungoz/AppIntBlockerGUI/archive/main.tar.gz
+
+# Exclude files
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Include files
+include:
+  - _pages
