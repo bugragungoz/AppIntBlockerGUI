@@ -106,6 +106,10 @@ namespace AppIntBlockerGUI
                 {
                     RestartAsAdministrator();
                 }
+                else
+                {
+                    dialogService.ShowWarning("Operation cancelled. The application will now exit.", "Operation Cancelled");
+                }
                 Current.Shutdown();
                 return;
             }
@@ -179,7 +183,26 @@ namespace AppIntBlockerGUI
             {
                 var logger = ServiceProvider?.GetRequiredService<ILogger<App>>();
                 logger?.LogError(ex, "Failed to restart application as administrator.");
-                MessageBox.Show("Failed to restart the application with administrator privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                // Use the themed dialog service instead of the default message box so the look & feel
+                // is consistent across all user interactions.
+                var dialogService = ServiceProvider?.GetService<IDialogService>();
+
+                // Native error code 1223 == ERROR_CANCELLED (operation cancelled by the user)
+                if (ex is System.ComponentModel.Win32Exception win32Ex && win32Ex.NativeErrorCode == 1223)
+                {
+                    dialogService?.ShowWarning("Operation cancelled. The application will now exit.", "Operation Cancelled");
+                }
+                else
+                {
+                    dialogService?.ShowError("Failed to restart the application with administrator privileges.", "Error");
+                }
+
+                if (dialogService == null)
+                {
+                    // Fallback in the rare case DI container is not yet ready
+                    MessageBox.Show("Failed to restart the application with administrator privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
             Current.Shutdown();
         }
