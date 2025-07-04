@@ -6,6 +6,7 @@ namespace AppIntBlockerGUI.Services
     {
         string? OpenFolderDialog();
         string? OpenFileDialog(string title = "Select File", string filter = "All Files|*.*");
+        string? SaveFileDialog(string title = "Save File", string filter = "All Files|*.*", string defaultExt = "", string fileName = "");
         void ShowMessage(string message, string title = "Information");
         void ShowInfo(string message, string title = "Information");
         void ShowWarning(string message, string title = "Warning");

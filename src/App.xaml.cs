@@ -43,6 +43,7 @@ public partial class App : Application
         var services = new ServiceCollection();
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
+        ServiceProvider = _serviceProvider; // Set static reference
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -67,66 +68,96 @@ public partial class App : Application
         services.AddSingleton<MainWindow>();
     }
 
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        
+        // Use fire-and-forget with proper exception handling
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await InitializeApplicationAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception and show user-friendly message
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show($"Application initialization failed: {ex.Message}", 
+                        "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.Current.Shutdown(1);
+                });
+            }
+        });
+    }
 
+    private async Task InitializeApplicationAsync()
+    {
         // If already running as admin, proceed directly to loading.
         if (IsRunAsAdministrator())
         {
-            var loadingWindow = new LoadingWindow();
-            Application.Current.MainWindow = loadingWindow;
-            loadingWindow.Show();
+            LoadingWindow? loadingWindow = null;
+            MainWindow? mainWindow = null;
 
-            loadingWindow.UpdateStatus("Initializing...");
-            
-            await Task.Run(async () =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                // Pre-load and initialize view models in the background
-                var blockAppViewModel = _serviceProvider.GetRequiredService<BlockApplicationViewModel>();
-                await blockAppViewModel.InitializeAsync();
-
-                var mainViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
-                await mainViewModel.LoadInitialDataAsync();
+                loadingWindow = new LoadingWindow();
+                Application.Current.MainWindow = loadingWindow;
+                loadingWindow.Show();
+                loadingWindow.UpdateStatus("Initializing...");
             });
 
-            loadingWindow.UpdateStatus("Finalizing...");
-            await Task.Delay(500); // Small delay for the message to be readable
+            // Background initialization
+            var blockAppViewModel = _serviceProvider.GetRequiredService<BlockApplicationViewModel>();
+            await blockAppViewModel.InitializeAsync().ConfigureAwait(false);
 
-            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-            Application.Current.MainWindow = mainWindow;
-            
-            loadingWindow.Close();
-            mainWindow.Show();
+            var mainViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
+            await mainViewModel.LoadInitialDataAsync().ConfigureAwait(false);
+
+            // Switch to main window on UI thread
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                loadingWindow?.UpdateStatus("Finalizing...");
+                mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                Application.Current.MainWindow = mainWindow;
+                loadingWindow?.Close();
+                mainWindow.Show();
+            });
+
+            await Task.Delay(500).ConfigureAwait(false); // Small delay for the message to be readable
             return;
         }
 
-        // If not admin, require restart.
-        var confirmationDialog = new CustomDialogWindow(
-            "Administrator Privileges Required",
-            "AppIntBlocker requires administrator privileges to manage Windows Firewall rules.\n\n" +
-            "Would you like to restart the application as administrator?",
-            "❓",
-            showCancelButton: true);
-
-        if (confirmationDialog.ShowDialog() == true)
+        // If not admin, require restart - handle on UI thread
+        await Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            if (!RestartAsAdministrator())
+            var confirmationDialog = new CustomDialogWindow(
+                "Administrator Privileges Required",
+                "AppIntBlocker requires administrator privileges to manage Windows Firewall rules.\n\n" +
+                "Would you like to restart the application as administrator?",
+                "❓",
+                showCancelButton: true);
+
+            if (confirmationDialog.ShowDialog() == true)
             {
-                // Failure, UAC was likely denied. Show a message.
-                var warningDialog = new CustomDialogWindow("Permission Denied", "Administrator privileges were not granted. The application cannot continue.", "⚠️");
-                warningDialog.ShowDialog();
+                if (!RestartAsAdministrator())
+                {
+                    // Failure, UAC was likely denied. Show a message.
+                    var warningDialog = new CustomDialogWindow("Permission Denied", "Administrator privileges were not granted. The application cannot continue.", "⚠️");
+                    warningDialog.ShowDialog();
+                }
             }
-        }
-        else
-        {
-            // User canceled the restart request. Show a confirmation.
-            var canceledDialog = new CustomDialogWindow("Operation Canceled", "The request to restart as administrator was canceled. The application will now close.", "ℹ️");
-            canceledDialog.ShowDialog();
-        }
+            else
+            {
+                // User canceled the restart request. Show a confirmation.
+                var canceledDialog = new CustomDialogWindow("Operation Canceled", "The request to restart as administrator was canceled. The application will now close.", "ℹ️");
+                canceledDialog.ShowDialog();
+            }
 
-        // After all dialogs are handled, explicitly shut down.
-        Shutdown();
+            // After all dialogs are handled, explicitly shut down.
+            Shutdown();
+        });
     }
 
     private bool IsRunAsAdministrator()
@@ -179,8 +210,13 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // CRITICAL FIX: Dispose static ServiceProvider
+        if (ServiceProvider is IDisposable disposableStatic)
+            disposableStatic.Dispose();
+            
         if (_serviceProvider is IDisposable disposable)
             disposable.Dispose();
+            
         base.OnExit(e);
     }
 

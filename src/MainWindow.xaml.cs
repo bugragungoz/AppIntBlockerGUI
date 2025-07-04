@@ -30,15 +30,37 @@ namespace AppIntBlockerGUI
             DataContext = viewModel;
         }
 
-        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Asynchronously load the initial view to improve startup performance.
-            // The main window shell appears instantly, and the content loads a moment later.
-            if (DataContext is MainWindowViewModel viewModel)
+            // Use fire-and-forget with exception handling
+            _ = Task.Run(async () =>
             {
-                await Task.Delay(50); // Small delay to ensure the window is fully rendered before loading content.
-                viewModel.NavigateToBlockApplicationCommand.Execute(null);
-            }
+                try
+                {
+                    await LoadInitialViewAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show($"Failed to load initial view: {ex.Message}", 
+                            "Load Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    });
+                }
+            });
+        }
+
+        private async Task LoadInitialViewAsync()
+        {
+            await Task.Delay(50).ConfigureAwait(false); // Small delay
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (DataContext is MainWindowViewModel viewModel)
+                {
+                    viewModel.NavigateToBlockApplicationCommand.Execute(null);
+                }
+            });
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)

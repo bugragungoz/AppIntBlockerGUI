@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AppIntBlockerGUI.Services;
@@ -240,22 +239,19 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                using (var dialog = new FolderBrowserDialog())
-                {
-                    dialog.Description = "Select backup location for AppIntBlocker";
-                    dialog.SelectedPath = BackupLocation;
+                // FIXED: Use WPF dialog service instead of Windows Forms
+                var selectedPath = _dialogService.OpenFolderDialog();
 
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        BackupLocation = dialog.SelectedPath;
-                        _loggingService.LogInfo($"Backup location changed to: {BackupLocation}");
-                    }
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    BackupLocation = selectedPath;
+                    _loggingService.LogInfo($"Backup location changed to: {BackupLocation}");
                 }
             }
             catch (Exception ex)
             {
                 _loggingService.LogError("Error browsing for backup location", ex);
-                _dialogService.ShowMessage("Failed to browse for backup location.", "Error");
+                _dialogService.ShowError("Failed to browse for backup location.");
             }
         }
 
@@ -292,42 +288,43 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                using (var dialog = new SaveFileDialog())
+                // FIXED: Use WPF dialog service instead of Windows Forms
+                var fileName = $"AppIntBlocker_Settings_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+                var filePath = _dialogService.SaveFileDialog(
+                    "Export Settings",
+                    "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    "json",
+                    fileName);
+
+                if (!string.IsNullOrEmpty(filePath))
                 {
-                    dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
-                    dialog.DefaultExt = "json";
-                    dialog.FileName = $"AppIntBlocker_Settings_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-
-                    if (dialog.ShowDialog() == DialogResult.OK)
+                    var currentSettings = new Models.AppSettings
                     {
-                        var currentSettings = new Models.AppSettings
-                        {
-                            CreateRestorePoint = AutoCreateRestorePoint,
-                            EnableDetailedLogging = EnableDetailedLogging,
-                            IncludeSubdirectories = DefaultIncludeSubdirectories,
-                            BlockExeFiles = DefaultBlockExeFiles,
-                            BlockDllFiles = DefaultBlockDllFiles,
-                            UseExclusions = EnableExclusionsByDefault,
-                            ExcludedKeywords = DefaultExcludedKeywords,
-                            ExcludedFiles = DefaultExcludedFiles
-                        };
+                        CreateRestorePoint = AutoCreateRestorePoint,
+                        EnableDetailedLogging = EnableDetailedLogging,
+                        IncludeSubdirectories = DefaultIncludeSubdirectories,
+                        BlockExeFiles = DefaultBlockExeFiles,
+                        BlockDllFiles = DefaultBlockDllFiles,
+                        UseExclusions = EnableExclusionsByDefault,
+                        ExcludedKeywords = DefaultExcludedKeywords,
+                        ExcludedFiles = DefaultExcludedFiles
+                    };
 
-                        var json = System.Text.Json.JsonSerializer.Serialize(currentSettings, new System.Text.Json.JsonSerializerOptions
-                        {
-                            WriteIndented = true
-                        });
+                    var json = System.Text.Json.JsonSerializer.Serialize(currentSettings, new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
 
-                        File.WriteAllText(dialog.FileName, json);
+                    File.WriteAllText(filePath, json);
 
-                        _dialogService.ShowMessage($"Settings exported successfully to:\n{dialog.FileName}", "Export Complete");
-                        _loggingService.LogInfo($"Settings exported to: {dialog.FileName}");
-                    }
+                    _dialogService.ShowMessage($"Settings exported successfully to:\n{filePath}", "Export Complete");
+                    _loggingService.LogInfo($"Settings exported to: {filePath}");
                 }
             }
             catch (Exception ex)
             {
                 _loggingService.LogError("Error exporting settings", ex);
-                _dialogService.ShowMessage("Failed to export settings. Check the log for details.", "Error");
+                _dialogService.ShowError("Failed to export settings. Check the log for details.");
             }
         }
 
@@ -336,50 +333,49 @@ namespace AppIntBlockerGUI.ViewModels
         {
             try
             {
-                using (var dialog = new OpenFileDialog())
+                // FIXED: Use WPF dialog service instead of Windows Forms
+                var filePath = _dialogService.OpenFileDialog(
+                    "Import Settings",
+                    "JSON files (*.json)|*.json|All files (*.*)|*.*");
+
+                if (!string.IsNullOrEmpty(filePath))
                 {
-                    dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
-                    dialog.DefaultExt = "json";
+                    var confirmMessage = "This will overwrite your current settings with the imported ones.\n\n" +
+                                       "Are you sure you want to continue?";
 
-                    if (dialog.ShowDialog() == DialogResult.OK)
+                    if (!_dialogService.ShowConfirmation(confirmMessage, "Import Settings"))
                     {
-                        var confirmMessage = "This will overwrite your current settings with the imported ones.\n\n" +
-                                           "Are you sure you want to continue?";
+                        return;
+                    }
 
-                        if (!_dialogService.ShowConfirmation(confirmMessage, "Import Settings"))
-                        {
-                            return;
-                        }
+                    var json = File.ReadAllText(filePath);
+                    var importedSettings = System.Text.Json.JsonSerializer.Deserialize<Models.AppSettings>(json);
 
-                        var json = File.ReadAllText(dialog.FileName);
-                        var importedSettings = System.Text.Json.JsonSerializer.Deserialize<Models.AppSettings>(json);
+                    if (importedSettings != null)
+                    {
+                        // Apply imported settings
+                        AutoCreateRestorePoint = importedSettings.CreateRestorePoint;
+                        EnableDetailedLogging = importedSettings.EnableDetailedLogging;
+                        DefaultIncludeSubdirectories = importedSettings.IncludeSubdirectories;
+                        DefaultBlockExeFiles = importedSettings.BlockExeFiles;
+                        DefaultBlockDllFiles = importedSettings.BlockDllFiles;
+                        EnableExclusionsByDefault = importedSettings.UseExclusions;
+                        DefaultExcludedKeywords = importedSettings.ExcludedKeywords;
+                        DefaultExcludedFiles = importedSettings.ExcludedFiles;
 
-                        if (importedSettings != null)
-                        {
-                            // Apply imported settings
-                            AutoCreateRestorePoint = importedSettings.CreateRestorePoint;
-                            EnableDetailedLogging = importedSettings.EnableDetailedLogging;
-                            DefaultIncludeSubdirectories = importedSettings.IncludeSubdirectories;
-                            DefaultBlockExeFiles = importedSettings.BlockExeFiles;
-                            DefaultBlockDllFiles = importedSettings.BlockDllFiles;
-                            EnableExclusionsByDefault = importedSettings.UseExclusions;
-                            DefaultExcludedKeywords = importedSettings.ExcludedKeywords;
-                            DefaultExcludedFiles = importedSettings.ExcludedFiles;
-
-                            _dialogService.ShowMessage($"Settings imported successfully from:\n{dialog.FileName}", "Import Complete");
-                            _loggingService.LogInfo($"Settings imported from: {dialog.FileName}");
-                        }
-                        else
-                        {
-                            _dialogService.ShowMessage("Invalid settings file format.", "Import Error");
-                        }
+                        _dialogService.ShowMessage($"Settings imported successfully from:\n{filePath}", "Import Complete");
+                        _loggingService.LogInfo($"Settings imported from: {filePath}");
+                    }
+                    else
+                    {
+                        _dialogService.ShowError("Invalid settings file format.");
                     }
                 }
             }
             catch (Exception ex)
             {
                 _loggingService.LogError("Error importing settings", ex);
-                _dialogService.ShowMessage("Failed to import settings. Check the log for details.", "Error");
+                _dialogService.ShowError("Failed to import settings. Check the log for details.");
             }
         }
     }

@@ -1,6 +1,6 @@
 using System.Windows;
 using AppIntBlockerGUI.Views;
-using WinForms = System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace AppIntBlockerGUI.Services
 {
@@ -8,21 +8,56 @@ namespace AppIntBlockerGUI.Services
     {
         public string? OpenFolderDialog()
         {
-            using var dialog = new WinForms.FolderBrowserDialog();
-            var result = dialog.ShowDialog();
-            return result == WinForms.DialogResult.OK ? dialog.SelectedPath : null;
+            // FIXED: Use WPF dialog instead of Windows Forms
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select Folder",
+                CheckFileExists = false,
+                CheckPathExists = true,
+                FileName = "Folder Selection",
+                Filter = "Folders|*.",
+                ValidateNames = false
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                return System.IO.Path.GetDirectoryName(dialog.FileName);
+            }
+            return null;
         }
 
         public string? OpenFileDialog(string title = "Select File", string filter = "All Files|*.*")
         {
-            using var dialog = new WinForms.OpenFileDialog
+            // FIXED: Use WPF dialog instead of Windows Forms
+            var dialog = new OpenFileDialog
             {
                 Title = title,
                 Filter = filter,
                 Multiselect = false
             };
-            var result = dialog.ShowDialog();
-            return result == WinForms.DialogResult.OK ? dialog.FileName : null;
+
+            if (dialog.ShowDialog() == true)
+            {
+                return dialog.FileName;
+            }
+            return null;
+        }
+
+        public string? SaveFileDialog(string title = "Save File", string filter = "All Files|*.*", string defaultExt = "", string fileName = "")
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = title,
+                Filter = filter,
+                DefaultExt = defaultExt,
+                FileName = fileName
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                return dialog.FileName;
+            }
+            return null;
         }
 
         public void ShowMessage(string message, string title = "Information")
