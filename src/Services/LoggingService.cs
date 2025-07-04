@@ -8,25 +8,12 @@ namespace AppIntBlockerGUI.Services
     using System.IO;
     using Serilog;
 
-    public interface ILoggingService
-    {
-        void LogInfo(string message);
-
-        void LogWarning(string message);
-
-        void LogError(string message, Exception? exception = null);
-
-        void LogDebug(string message);
-
-        event Action<string> LogEntryAdded;
-    }
-
     public class LoggingService : ILoggingService
     {
         private readonly ILogger logger;
         private readonly object eventLock = new object();
 
-        private event Action<string>? _logEntryAdded1;
+        private event Action<string>? logEntryAdded;
 
         public event Action<string> LogEntryAdded
         {
@@ -34,7 +21,7 @@ namespace AppIntBlockerGUI.Services
             {
                 lock (this.eventLock)
                 {
-                    this._logEntryAdded1 += value;
+                    this.logEntryAdded += value;
                 }
             }
 
@@ -42,7 +29,7 @@ namespace AppIntBlockerGUI.Services
             {
                 lock (this.eventLock)
                 {
-                    this._logEntryAdded1 -= value;
+                    this.logEntryAdded -= value;
                 }
             }
         }
@@ -69,7 +56,7 @@ namespace AppIntBlockerGUI.Services
             Action<string>? handler;
             lock (this.eventLock)
             {
-                handler = this._logEntryAdded1;
+                handler = this.logEntryAdded;
             }
 
             // Invoke on UI thread if needed
