@@ -1,181 +1,192 @@
----
-layout: default
-title: Home
-permalink: /
----
+⚠️ **Disclaimer:** This project is currently under active development and in a pre-release state. Features may be unstable or subject to change. Please use with caution.
 
 # AppIntBlockerGUI v1.0
 
-![Block Application View](assets/images/blockApplication.png)
+![Block Application View](src/images/blockApplication.png)
+
+### Additional Views
+
+| Manage Rules | Restore Points | Windows Firewall | Settings (General) | Settings (Theme) |
+| :---: | :---: | :---: | :---: | :---: |
+| ![Manage Rules View](src/images/manageRules.png) | ![Restore Points View](src/images/restorePoints.png) | ![Windows Firewall View](src/images/windowsFirewall.png) | ![Settings View 1](src/images/settings1.png) | ![Settings View 2](src/images/settings2.png) |
+
+### Loading & Dialogs
+
+| Loading Screen | Admin Privileges | Permission Denied | Operation Cancelled |
+| :---: | :---: | :---: | :---: |
+| ![Loading Screen](src/images/loadingScreen.png) | ![Admin Privileges](src/images/adminPrivileges.png) | ![Permission Denied](src/images/permissionDenied.png) | ![Operation Cancelled](src/images/operationCancelled.png) |
+
 
 **Professional Windows Application Firewall Manager with Modern UI**
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-black.svg)](https://github.com/bugragungoz/AppIntBlockerGUI)
 
----
+## Overview
 
-## 🚀 Quick Start
+AppIntBlockerGUI is a sophisticated Windows application that provides an intuitive interface for managing Windows Firewall rules. Built with modern WPF technology and following MVVM architectural patterns, it offers enterprise-grade firewall management capabilities with a beautiful, user-friendly interface.
+
+Developed with the assistance of advanced AI models including Claude 4 Sonnet and Gemini 2.5 Pro to ensure modern architectural patterns and best practices.
+
+## Features
+
+### Core Functionality
+- **Application Blocking**: Easily block applications from network access
+- **Rule Management**: Create, edit, and delete firewall rules with advanced options
+- **Restore Points**: Create and restore firewall configuration snapshots
+- **Windows Firewall Integration**: Direct integration with Windows Firewall API
+- **Real-time Monitoring**: Live status updates and rule validation
+- **Administrator Privilege Management**: Automatic privilege checking and elevation
+
+### Technical Excellence
+- **MVVM Architecture**: Clean separation of concerns
+- **Dependency Injection**: Microsoft.Extensions.DependencyInjection
+- **Async/Await Patterns**: Non-blocking UI operations
+- **Error Handling**: Comprehensive exception management
+- **Logging System**: Detailed application logging
+- **Performance Optimized**: Efficient rule scanning and management
+
+## Quick Start
 
 ### Prerequisites
 - Windows 10/11
 - .NET 8.0 Runtime
-- Administrator privileges
+- Administrator privileges (the application will request them automatically)
 
 ### Installation
+
+**1. Open a Terminal**
+
+*Open your terminal or command prompt (e.g., PowerShell, Windows Terminal, or CMD).*
+
+
+**2. Clone the Repository**
 ```bash
 git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
+```
+
+**3. Navigate to the Source Directory**
+```bash
 cd AppIntBlockerGUI/src
+```
+
+**4. Build the Application**
+```bash
 dotnet build
+```
+
+**5. Run the Application**
+```bash
+dotnet run
+```
+*The application will automatically request administrator privileges if needed.*
+
+## Project Structure
+
+```
+AppIntBlockerGUI/
+├── src/
+│   └── AppIntBlockerGUI/          # Main WPF application
+│       ├── ViewModels/            # MVVM ViewModels
+│       ├── Views/                 # WPF Views and UserControls
+│       ├── Services/              # Business logic and services
+│       ├── Models/                # Data models
+│       ├── Converters/            # Value converters
+│       └── Resources/             # Themes and resources
+├── docs/                          # Documentation
+│   ├── api.md
+│   ├── bug_fixes_applied.md
+│   ├── changelog.md
+│   ├── code_structure_analysis.md
+│   ├── github_pages_setup_report.md
+│   ├── index.md
+│   ├── installation.md
+│   ├── roadmap.md
+│   └── security.md
+├── .gitignore
+├── CHANGELOG.md
+├── LICENSE
+└── README.md
+```
+
+## Configuration
+
+### Theme Customization
+The application supports custom themes. Edit `Resources/Themes/NulnOilGlossTheme.xaml` to customize colors and styling.
+
+### Logging
+Logs are automatically created in the `Logs/` directory. Configure logging levels in the application settings.
+
+## Development
+
+### Architecture
+- **Pattern**: MVVM (Model-View-ViewModel)
+- **Framework**: WPF (.NET 8.0)
+- **UI Library**: MahApps.Metro with Extended.Wpf.Toolkit
+- **Icons**: MahApps.Metro.IconPacks
+- **Charts**: ScottPlot.WPF
+- **DI Container**: Microsoft.Extensions.DependencyInjection
+
+### Key Services
+- `IFirewallService`: Windows Firewall API integration
+- `INavigationService`: MVVM navigation management
+- `IThemeService`: Dynamic theme switching
+- `ILoggingService`: Application logging
+- `IDialogService`: Modal dialog management
+
+### Building from Source
+```bash
+# Clone repository
+git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
+cd AppIntBlockerGUI/src/AppIntBlockerGUI
+
+# Restore dependencies
+dotnet restore
+
+# Build
+dotnet build
+
+# Run
 dotnet run
 ```
 
----
+## Performance Notes
 
-## ✨ Key Features
+- **Memory Usage**: Optimized for minimal memory footprint
+- **Startup Time**: Fast application startup with automatic privilege checking
+- **UI Responsiveness**: Non-blocking operations with progress indicators
+- **Rule Processing**: Efficient handling of Windows Firewall rules
 
-### 🛡️ **Firewall Management**
-- **Application Blocking**: Intuitive interface for blocking network access
-- **Rule Management**: Create, edit, and delete firewall rules
-- **Real-time Monitoring**: Live status updates and validation
-- **Bulk Operations**: Manage multiple rules simultaneously
+## License
 
-### 🔧 **System Integration**
-- **Windows Firewall API**: Direct integration with native Windows Firewall
-- **Restore Points**: Create and restore firewall configuration snapshots
-- **Administrator Privileges**: Automatic privilege checking and elevation
-- **PowerShell Integration**: Advanced rule management capabilities
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### 🎨 **Modern UI/UX**
-- **MVVM Architecture**: Clean separation of concerns
-- **Dynamic Themes**: Dark/Light mode support
-- **Material Design**: Professional icons and styling
-- **Responsive Interface**: Non-blocking operations with progress indicators
+## Related Projects
 
----
+- [Windows Firewall API Documentation](https://docs.microsoft.com/en-us/windows/win32/api/netfw/)
+- [MahApps.Metro](https://mahapps.com/)
+- [ScottPlot](https://scottplot.net/)
 
-## 📱 Application Views
+## AI Development Attribution
 
-| Main Interface | Rule Management |
-| :---: | :---: |
-| ![Block Application](assets/images/blockApplication.png) | ![Manage Rules](assets/images/manageRules.png) |
-
-| System Monitoring | Configuration |
-| :---: | :---: |
-| ![Windows Firewall](assets/images/windowsFirewall.png) | ![Settings](assets/images/settings1.png) |
-
----
-
-## 🏗️ Architecture Overview
-
-**AppIntBlockerGUI** follows modern software engineering principles:
-
-- **MVVM Pattern**: Model-View-ViewModel architecture
-- **Dependency Injection**: Microsoft.Extensions.DependencyInjection
-- **Async/Await**: Non-blocking UI operations
-- **Service Layer**: Clean business logic separation
-- **Error Handling**: Comprehensive exception management
-
-### Core Technologies
-- **.NET 8.0** with C# 12.0
-- **WPF** with MahApps.Metro
-- **Windows Firewall API** integration
-- **PowerShell** automation
-- **System Restore** integration
-
----
-
-## 📚 Documentation
-
-### 📖 **User Guides**
-- [Installation Guide](installation/) - Step-by-step setup instructions
-- [User Manual](user-guide/) - Complete usage documentation
-- [Troubleshooting](troubleshooting/) - Common issues and solutions
-
-### 🔧 **Developer Resources**
-- [API Documentation](api/) - Comprehensive service interfaces
-- [Architecture Guide](architecture/) - System design and patterns
-- [Contributing](contributing/) - Development guidelines
-
-### 🔒 **Security & Compliance**
-- [Security Analysis](security/) - Vulnerability assessment
-- [Best Practices](security/#best-practices) - Secure usage guidelines
-- [Audit Trail](security/#audit-logging) - Logging and monitoring
-
----
-
-## 🗺️ Project Roadmap
-
-### Version 1.1.0 (Q2 2025)
-- 📊 Advanced Analytics Dashboard
-- 🔍 Smart Rule Management
-- 📁 Import/Export Functionality
-- 🔎 Enhanced Search & Filtering
-
-### Version 1.2.0 (Q4 2025)
-- 👥 Multi-User Support
-- 🏢 Group Policy Integration
-- 📅 Scheduled Operations
-- 🚨 Real-Time Notifications
-
-[View Complete Roadmap](roadmap/)
-
----
-
-## 📊 Code Quality Metrics
-
-| Metric | Status | Details |
-|--------|--------|---------|
-| **Architecture** | ✅ Excellent | MVVM with DI |
-| **Code Coverage** | ⚠️ Pending | Unit tests needed |
-| **Security** | ⚠️ Review Required | [Security Analysis](security/) |
-| **Documentation** | ✅ Comprehensive | API, guides, roadmap |
-| **Performance** | ✅ Optimized | <2s rule loading |
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](contributing/) for details.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Install .NET 8.0 SDK
-4. Run `dotnet restore` in `/src`
-5. Make your changes
-6. Submit a pull request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-### AI Development Attribution
 This project was developed with the assistance of advanced AI models:
 - **Claude 4 Sonnet**: Architecture design, code structure, and best practices
 - **Gemini 2.5 Pro**: UI/UX patterns, documentation, and optimization strategies
 
-### Third-Party Libraries
-- [MahApps.Metro](https://mahapps.com/) - Modern WPF UI framework
-- [CommunityToolkit.Mvvm](https://docs.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) - MVVM helpers
-- [ScottPlot](https://scottplot.net/) - Charting and visualization
+The use of AI tools enabled rapid prototyping, adherence to modern development patterns, and comprehensive documentation while maintaining high code quality standards.
+
+## Security & Bug Fixes (2025)
+
+In 2025, critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `SECURITY_ANALYSIS.md` and `BUG_FIXES_APPLIED.md`.
+
+- Command-line (netsh) and PowerShell injection vulnerabilities fixed
+- Path traversal and input validation significantly improved
+- Error message sanitization to prevent sensitive data leaks
+- Settings file is now encrypted (DPAPI)
+
+> These security patches and fixes were proposed and implemented with the assistance of AI tools.
 
 ---
 
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/bugragungoz/AppIntBlockerGUI/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/bugragungoz/AppIntBlockerGUI/discussions)
-- **Documentation**: [Project Wiki](https://github.com/bugragungoz/AppIntBlockerGUI/wiki)
-
----
-
-*Last updated: January 2025*
+**croxz** 
