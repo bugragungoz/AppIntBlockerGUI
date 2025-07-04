@@ -10,10 +10,6 @@ namespace AppIntBlockerGUI.Services
     using CommunityToolkit.Mvvm.ComponentModel;
     using Microsoft.Extensions.DependencyInjection;
 
-    public class DefaultViewModel : ObservableObject
-    {
-    }
-
     public class NavigationService : ObservableObject, INavigationService
     {
         private readonly IServiceProvider serviceProvider;
