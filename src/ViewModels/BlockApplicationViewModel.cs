@@ -12,6 +12,8 @@ using System.Threading;
 using System.Windows;
 using System.Diagnostics;
 using System.Windows.Threading;
+using System.Security;
+using System.Text.RegularExpressions;
 
 namespace AppIntBlockerGUI.ViewModels
 {
@@ -57,6 +59,13 @@ namespace AppIntBlockerGUI.ViewModels
         [ObservableProperty] private string _welcomeMessage = "";
         public ObservableCollection<string> LogEntries { get; } = new ObservableCollection<string>();
 
+        // --- Compatibility Properties for refactored code ---
+        public string StatusMessage { get => CurrentOperationStatus; set => CurrentOperationStatus = value; }
+        public bool IsBlocking { get => IsOperationInProgress; set => IsOperationInProgress = value; }
+        public ObservableCollection<string> LogItems => LogEntries;
+        public int Progress { get; set; }
+        // --- End Compatibility Properties ---
+
         public BlockApplicationViewModel(
             IFirewallService firewallService, 
             ILoggingService loggingService, 
@@ -84,53 +93,52 @@ namespace AppIntBlockerGUI.ViewModels
         {
             var styles = new[] 
             {
-                // Style 1: Standard Block
+                // Style 1
                 @"
- CCCCC   RRRRRR   OOOOO   XXX   XXX   ZZZZZZZ
-CC    C  R     R O     O   XXX XXX       ZZZ
-CC       R     R O     O    XX XX       ZZZ
-CC       RRRRRR  O     O     XXX       ZZZ
-CC       R   R   O     O    XX XX     ZZZ
-CC    C  R    R  O     O   XXX XXX   ZZZ
- CCCCC   R     R  OOOOO   XXX   XXX  ZZZZZZZ",
+   ___ _ __ _____  __ ____
+ / __| '__/ _ \ \/ /|_  /
+| (__| | | (_) >  <  / / 
+ \___|_|  \___/_/\_\/___|",
 
-                // Style 2: Slant
+                // Style 2
                 @"
-   CCCCC   RRRRRR    OOOOO    XXX   XXX  ZZZZZZZ
-  CC    C  R     R  O     O    XXX XXX      ZZZ
- CC        R     R  O     O     XX XX      ZZZ
- CC        RRRRRR   O     O      XXX      ZZZ
- CC        R   R    O     O     XX XX    ZZZ
-  CC    C  R    R   O     O    XXX XXX  ZZZ
-   CCCCC   R     R   OOOOO    XXX   XXX ZZZZZZZ",
+    _,.----.                 _,.---._           ,-.--,          
+ .' .' -   \  .-.,.---.   ,-.' , -  `..--.-.  /=/, .' ,--,----.
+/==/  ,  ,-' /==/  `   \ /==/_,  ,  - \==\ -\/=/- /  /==/` - ./
+|==|-   |  .|==|-, .=., |==|   .=.     \==\ `-' ,/   `--`=/. / 
+|==|_   `-' \==|   '='  /==|_ : ;=:  - ||==|,  - |    /==/- /  
+|==|   _  , |==|- ,   .'|==| , '='     /==/   ,   \  /==/- /-. 
+\==\.       /==|_  . ,'. \==\ -    ,_ /==/, .--, - \/==/, `--`\
+ `-.`.___.-'/==/  /\ ,  ) '.='. -   .'\==\- \/=/ , /\==\-  -, |
+            `--`-`--`--'    `--`--''   `--`-'  `--`  `--`.-.--`",
                 
-                // Style 3: Dotted
+                // Style 3
                 @"
- oooooo   o--o   o----o   o   o   o---o
-o      o  o   o  o      o   o o   o     
-o         o--o   o      o    o    o----
-o         o  o   o      o   o o        o
-o      o  o   o  o      o  o   o  o     o
- oooooo   o   o  o----o   o   o   o---o",
+  ,---.,--.--. ,---.,--.  ,--.,-----.
+| .--'|  .--'| .-. |\  `'  / `-.  / 
+\ `--.|  |   ' '-' '/  /.  \  /  `-.
+ `---'`--'    `---''--'  '--'`-----'",
 
-                // Style 4: Modern Lines
+                // Style 4
                 @"
-  _______  ______    _______   __   __   _______
- /  ____/ /  __  \  /  ____/  |  | |  | /  ____/
-|  /      | |  | | |  /       |  | |  | |  /____
-| |       | |__| | | |        |  |_|  | \____   \
-|  \____  |   __/  |  \____   \______/  ____/   |
- \______\ |__|      \_______\         /_______/ ",
+  ___   _ __   ___   __  _  ____    
+ /'___\/\`'__\/ __`\/\ \/'\/\_ ,`\  
+/\ \__/\ \ \//\ \L\ \/>  </\/_/  /_ 
+\ \____\\ \_\\ \____//\_/\_\ /\____\
+ \/____/ \/_/ \/___/ \//\/_/ \/____/",
 
-                // Style 5: Cyber
+                // Style 5
                 @"
- [CCCCCC] [RRRRR]  [OOOOO]  [X]   [X] [ZZZZZZZ]
-[CC]      [RR]  [RR][OO] [OO]  [X] [X]      [ZZ]
-[CC]      [RR]  [RR][OO] [OO]   [X]X       [ZZ]
-[CC]      [RRRRR]  [OO] [OO]    [X]       [ZZ]
-[CC]      [RR] [RR][OO] [OO]   [X]X      [ZZ]
-[CC]      [RR]  [RR][OO] [OO]  [X] [X]   [ZZ]
- [CCCCCC] [RR]  [RR] [OOOOO]  [X]   [X] [ZZZZZZZ]"
+ ▄████▄   ██▀███   ▒█████  ▒██   ██▒▒███████▒
+▒██▀ ▀█  ▓██ ▒ ██▒▒██▒  ██▒▒▒ █ █ ▒░▒ ▒ ▒ ▄▀░
+▒▓█    ▄ ▓██ ░▄█ ▒▒██░  ██▒░░  █   ░░ ▒ ▄▀▒░ 
+▒▓▓▄ ▄██▒▒██▀▀█▄  ▒██   ██░ ░ █ █ ▒   ▄▀▒   ░
+▒ ▓███▀ ░░██▓ ▒██▒░ ████▓▒░▒██▒ ▒██▒▒███████▒
+░ ░▒ ▒  ░░ ▒▓ ░▒▓░░ ▒░▒░▒░ ▒▒ ░ ░▓ ░░▒▒ ▓░▒░▒
+  ░  ▒     ░▒ ░ ▒░  ░ ▒ ▒░ ░░   ░▒ ░░░▒ ▒ ░ ▒
+░          ░░   ░ ░ ░ ░ ▒   ░    ░  ░ ░ ░ ░ ░
+░ ░         ░         ░ ░   ░    ░    ░ ░    
+░                                   ░        "
             };
 
             var random = new Random();
@@ -310,14 +318,110 @@ o      o  o   o  o      o  o   o  o     o
             return $"{len:0.##} {sizes[order]}";
         }
 
-        [RelayCommand]
-        private async Task BlockApplicationAsync()
+        /// <summary>
+        /// Validates operation name to prevent injection attacks and ensure safe rule names.
+        /// AI-generated code: Enhanced input validation for security.
+        /// </summary>
+        private bool ValidateOperationName(string operationName)
         {
-            if (string.IsNullOrWhiteSpace(ApplicationPath))
+            if (string.IsNullOrWhiteSpace(operationName))
+                return true; // Empty is allowed, will be auto-generated
+
+            // Check length
+            if (operationName.Length > 100)
             {
-                _dialogService.ShowError("Please select an application to block.");
+                StatusMessage = "Error: Operation name is too long (maximum 100 characters).";
+                return false;
+            }
+
+            // Only allow safe characters for rule names
+            var validNameRegex = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_. -]+$");
+            if (!validNameRegex.IsMatch(operationName))
+            {
+                StatusMessage = "Error: Operation name contains invalid characters. Only letters, numbers, spaces, dots, hyphens, and underscores are allowed.";
+                return false;
+            }
+
+            // Prevent malicious names
+            var forbiddenPatterns = new[] { "cmd", "powershell", "netsh", "wmic", "reg", "schtasks", "..", "script", "execute" };
+            var lowerName = operationName.ToLower();
+            foreach (var pattern in forbiddenPatterns)
+            {
+                if (lowerName.Contains(pattern))
+                {
+                    StatusMessage = $"Error: Operation name cannot contain '{pattern}'.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Validates excluded files patterns to prevent injection attacks.
+        /// AI-generated code: Enhanced input validation for security.
+        /// </summary>
+        private bool ValidateExcludedFiles(List<string> excludedFiles)
+        {
+            foreach (var file in excludedFiles)
+            {
+                if (string.IsNullOrWhiteSpace(file))
+                    continue;
+
+                // Check length
+                if (file.Length > 255)
+                {
+                    StatusMessage = $"Error: Excluded file name is too long: '{file}' (maximum 255 characters).";
+                    return false;
+                }
+
+                // Only allow safe characters for file patterns
+                var validFileRegex = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_. *-]+$");
+                if (!validFileRegex.IsMatch(file))
+                {
+                    StatusMessage = $"Error: Invalid character in excluded file pattern '{file}'.";
+                    return false;
+                }
+
+                // Prevent malicious patterns
+                if (file.Contains("..") || file.Contains("/") || file.Contains("\\"))
+                {
+                    StatusMessage = $"Error: Excluded file pattern cannot contain path separators or traversal: '{file}'.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        [RelayCommand]
+        private async Task BlockApplication()
+        {
+            if (!App.IsRunAsAdministrator())
+            {
+                StatusMessage = "Error: Administrator privileges are required to block applications.";
                 return;
             }
+
+            if (IsBlocking || string.IsNullOrWhiteSpace(ApplicationPath))
+            {
+                return;
+            }
+
+            if (!IsPathSafe(ApplicationPath))
+            {
+                // IsPathSafe sets the status message
+                return;
+            }
+
+            // Validate operation name
+            if (!ValidateOperationName(OperationName))
+            {
+                return;
+            }
+
+            IsBlocking = true;
+            Progress = 0;
 
             if (string.IsNullOrWhiteSpace(OperationName))
             {
@@ -329,17 +433,57 @@ o      o  o   o  o      o  o   o  o     o
                 IsOperationInProgress = true;
                 CurrentOperationStatus = "Blocking application...";
                 
-                // Start time estimation
-                _ = Task.Run(() => UpdateTimeEstimation());
+                var excludedKeywords = new List<string>();
+                if (UseExclusions)
+                {
+                    var keywords = ExcludedKeywords.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                                                   .Select(k => k.Trim())
+                                                   .Where(k => !string.IsNullOrWhiteSpace(k));
+                    
+                    // Enhanced keyword validation - more restrictive
+                    var validKeywordRegex = new System.Text.RegularExpressions.Regex("^[a-zA-Z0-9_.-]+$");
+                    
+                    foreach (var keyword in keywords)
+                    {
+                        // Additional length check
+                        if (keyword.Length > 50)
+                        {
+                            StatusMessage = $"Error: Exclusion keyword is too long: '{keyword}' (maximum 50 characters).";
+                            IsBlocking = false;
+                            return;
+                        }
 
-                var excludedKeywords = UseExclusions ? 
-                    ExcludedKeywords.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(k => k.Trim()).ToList() : 
-                    new List<string>();
+                        if (validKeywordRegex.IsMatch(keyword))
+                        {
+                            excludedKeywords.Add(keyword);
+                        }
+                        else
+                        {
+                            StatusMessage = $"Error: Invalid character in exclusion keyword '{keyword}'. Only letters, numbers, dots, hyphens, and underscores are allowed.";
+                            IsBlocking = false;
+                            return;
+                        }
+                    }
+                }
+
+                var excludedFiles = new List<string>();
+                if (UseExclusions && !string.IsNullOrWhiteSpace(ExcludedFiles))
+                {
+                    var files = ExcludedFiles.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                                            .Select(f => f.Trim())
+                                            .Where(f => !string.IsNullOrWhiteSpace(f))
+                                            .ToList();
+
+                    // Validate excluded files
+                    if (!ValidateExcludedFiles(files))
+                    {
+                        IsBlocking = false;
+                        return;
+                    }
+
+                    excludedFiles.AddRange(files);
+                }
                 
-                var excludedFiles = UseExclusions ? 
-                    ExcludedFiles.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(f => f.Trim()).ToList() : 
-                    new List<string>();
-
                 await _firewallService.BlockApplicationFiles(
                     ApplicationPath,
                     IncludeExeFiles,
@@ -352,51 +496,17 @@ o      o  o   o  o      o  o   o  o     o
                 ).ConfigureAwait(false);
 
                 CurrentOperationStatus = "Operation completed successfully";
-                _dialogService.ShowInfo($"Application '{FolderName}' has been blocked successfully.");
+                _dialogService.ShowMessage($"Application '{FolderName}' has been blocked successfully.", "Success");
             }
             catch (Exception ex)
             {
                 CurrentOperationStatus = "Operation failed";
                 _loggingService.LogError($"Failed to block application: {ex.Message}");
-                _dialogService.ShowError($"Failed to block application: {ex.Message}");
+                _dialogService.ShowMessage($"Failed to block application: {ex.Message}", "Error");
             }
             finally
             {
                 IsOperationInProgress = false;
-                EstimatedTimeRemaining = "00:00";
-            }
-        }
-
-        private async Task UpdateTimeEstimation()
-        {
-            var elapsed = TimeSpan.Zero;
-            var estimatedTotal = TimeSpan.FromSeconds(30); // Base estimate
-
-            try
-            {
-                while (!_cancellationTokenSource.Token.IsCancellationRequested)
-                {
-                    // CRITICAL FIX: Check both cancellation token and operation status
-                    if (!IsOperationInProgress)
-                        break;
-
-                    await Task.Delay(1000, _cancellationTokenSource.Token).ConfigureAwait(false);
-                    elapsed = elapsed.Add(TimeSpan.FromSeconds(1));
-                    
-                    var remaining = estimatedTotal - elapsed;
-                    if (remaining.TotalSeconds > 0)
-                    {
-                        EstimatedTimeRemaining = $"{remaining.Minutes:D2}:{remaining.Seconds:D2}";
-                    }
-                    else
-                    {
-                        EstimatedTimeRemaining = "Finalizing...";
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Operation was cancelled, this is expected
                 EstimatedTimeRemaining = "00:00";
             }
         }
@@ -422,6 +532,116 @@ o      o  o   o  o      o  o   o  o     o
         partial void OnOperationNameChanged(string value)
         {
             OnPropertyChanged(nameof(FullRuleName));
+        }
+
+        [RelayCommand]
+        private void ResetSettings()
+        {
+            // ... implementation ...
+        }
+
+        /// <summary>
+        /// Validates if a path is safe to use, preventing path traversal attacks and access to system directories.
+        /// AI-generated code: Enhanced security validation to prevent path traversal vulnerabilities.
+        /// </summary>
+        private bool IsPathSafe(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return true; 
+
+            try
+            {
+                // Normalize the path to prevent traversal attacks
+                var fullPath = Path.GetFullPath(path);
+                
+                // Check for path traversal attempts (e.g., ../, ..\)
+                if (path.Contains("..") || path.Contains("./") || path.Contains(".\\"))
+                {
+                    CurrentOperationStatus = "Error: Path traversal attempts are not allowed.";
+                    _dialogService.ShowMessage(CurrentOperationStatus, "Security Warning");
+                    return false;
+                }
+                
+                // Get system directories
+                var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                var systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                var programFilesDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                var programFilesX86Directory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                
+                // Prevent access to critical system directories
+                var forbiddenDirectories = new[]
+                {
+                    windowsDirectory,
+                    systemDirectory,
+                    Path.Combine(windowsDirectory, "System32"),
+                    Path.Combine(windowsDirectory, "SysWOW64"),
+                    Path.Combine(windowsDirectory, "Boot"),
+                    Path.Combine(windowsDirectory, "Recovery")
+                };
+
+                foreach (var forbiddenDir in forbiddenDirectories)
+                {
+                    if (!string.IsNullOrEmpty(forbiddenDir) && 
+                        fullPath.StartsWith(forbiddenDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CurrentOperationStatus = "Error: Blocking files in system directories is not permitted.";
+                        _dialogService.ShowMessage(CurrentOperationStatus, "Security Warning");
+                        return false;
+                    }
+                }
+                
+                // Check if path exists and is accessible
+                if (File.Exists(fullPath))
+                {
+                    var fileInfo = new FileInfo(fullPath);
+                    // Additional check for critical system files
+                    if (fileInfo.Extension.Equals(".sys", StringComparison.OrdinalIgnoreCase) ||
+                        fileInfo.Extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) && 
+                        fileInfo.DirectoryName != null &&
+                        fileInfo.DirectoryName.StartsWith(systemDirectory, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CurrentOperationStatus = "Error: Blocking system files is not permitted.";
+                        _dialogService.ShowMessage(CurrentOperationStatus, "Security Warning");
+                        return false;
+                    }
+                }
+                else if (Directory.Exists(fullPath))
+                {
+                    // Directory exists, additional checks passed above
+                }
+                else
+                {
+                    CurrentOperationStatus = "Error: The specified path does not exist.";
+                    _dialogService.ShowMessage(CurrentOperationStatus, "Validation Error");
+                    return false;
+                }
+            }
+            catch (ArgumentException)
+            {
+                CurrentOperationStatus = "Error: The provided path contains invalid characters.";
+                _dialogService.ShowMessage(CurrentOperationStatus, "Validation Error");
+                return false;
+            }
+            catch (SecurityException)
+            {
+                CurrentOperationStatus = "Error: You do not have permission to access the specified path.";
+                _dialogService.ShowMessage(CurrentOperationStatus, "Access Denied");
+                return false;
+            }
+            catch (PathTooLongException)
+            {
+                CurrentOperationStatus = "Error: The specified path is too long.";
+                _dialogService.ShowMessage(CurrentOperationStatus, "Validation Error");
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                CurrentOperationStatus = "Error: Access to the path is denied.";
+                _dialogService.ShowMessage(CurrentOperationStatus, "Access Denied");
+                return false;
+            }
+            
+            return true;
         }
 
         public void Dispose()

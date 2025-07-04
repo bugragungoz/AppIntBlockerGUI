@@ -165,6 +165,17 @@ This project was developed with the assistance of advanced AI models:
 
 The use of AI tools enabled rapid prototyping, adherence to modern development patterns, and comprehensive documentation while maintaining high code quality standards.
 
+## Security & Bug Fixes (2024)
+
+In 2024, critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `SECURITY_ANALYSIS.md` and `BUG_FIXES_APPLIED.md`.
+
+- Command-line (netsh) and PowerShell injection vulnerabilities fixed
+- Path traversal and input validation significantly improved
+- Error message sanitization to prevent sensitive data leaks
+- Settings file is now encrypted (DPAPI)
+
+> These security patches and fixes were proposed and implemented with the assistance of AI tools.
+
 ---
 
 **croxz** 

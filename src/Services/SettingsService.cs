@@ -1,7 +1,9 @@
-using Newtonsoft.Json;
-using AppIntBlockerGUI.Models;
 using System;
 using System.IO;
+using System.Text;
+using System.Security.Cryptography;
+using AppIntBlockerGUI.Models;
+using Newtonsoft.Json;
 
 namespace AppIntBlockerGUI.Services
 {
@@ -9,21 +11,23 @@ namespace AppIntBlockerGUI.Services
     {
         AppSettings LoadSettings();
         void SaveSettings(AppSettings settings);
-        string SettingsFilePath { get; }
+        string GetSettingsFilePath();
     }
 
     public class SettingsService : ISettingsService
     {
-        private readonly ILoggingService _logger;
-        public string SettingsFilePath { get; }
+        private static readonly string AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AppIntBlockerGUI");
+        private static readonly string SettingsFilePath = Path.Combine(AppDataPath, "settings.json.protected");
+        
+        // Optional: Entropy adds an extra layer of security, but makes the data non-portable
+        private static readonly byte[] Entropy = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
-        public SettingsService(ILoggingService? logger = null)
+        public SettingsService()
         {
-            _logger = logger ?? new LoggingService();
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var appDir = Path.Combine(appDataPath, "AppIntBlockerGUI");
-            Directory.CreateDirectory(appDir);
-            SettingsFilePath = Path.Combine(appDir, "settings.json");
+            if (!Directory.Exists(AppDataPath))
+            {
+                Directory.CreateDirectory(AppDataPath);
+            }
         }
 
         public AppSettings LoadSettings()
@@ -32,16 +36,20 @@ namespace AppIntBlockerGUI.Services
             {
                 if (!File.Exists(SettingsFilePath))
                 {
-                    return new AppSettings(); // Return default settings
+                    return new AppSettings();
                 }
 
-                var json = File.ReadAllText(SettingsFilePath);
-                var settings = JsonConvert.DeserializeObject<AppSettings>(json);
-                return settings ?? new AppSettings();
+                var protectedData = File.ReadAllBytes(SettingsFilePath);
+                var unprotectedData = ProtectedData.Unprotect(protectedData, Entropy, DataProtectionScope.CurrentUser);
+                var json = Encoding.UTF8.GetString(unprotectedData);
+
+                return JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to load settings from {SettingsFilePath}: {ex.Message}");
+                // Handle exceptions (e.g., file corruption, permission issues)
+                // For simplicity, we return default settings. A real app might log this.
+                Console.WriteLine($"Failed to load settings: {ex.Message}");
                 return new AppSettings();
             }
         }
@@ -51,12 +59,18 @@ namespace AppIntBlockerGUI.Services
             try
             {
                 var json = JsonConvert.SerializeObject(settings, Formatting.Indented);
-                File.WriteAllText(SettingsFilePath, json);
+                var data = Encoding.UTF8.GetBytes(json);
+                var protectedData = ProtectedData.Protect(data, Entropy, DataProtectionScope.CurrentUser);
+
+                File.WriteAllBytes(SettingsFilePath, protectedData);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to save settings to {SettingsFilePath}: {ex.Message}");
+                // Handle exceptions (e.g., permission issues)
+                Console.WriteLine($"Failed to save settings: {ex.Message}");
             }
         }
+
+        public string GetSettingsFilePath() => SettingsFilePath;
     }
 } 
