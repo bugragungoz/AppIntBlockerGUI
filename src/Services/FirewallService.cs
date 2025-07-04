@@ -819,30 +819,31 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-    public void OpenWindowsFirewallWithAdvancedSecurity()
-    {
-        try
+        public void OpenWindowsFirewallWithAdvancedSecurity()
         {
-            var process = Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = "wf.msc",
-                UseShellExecute = true
-            });
-            
-            if (process == null)
-            {
-                throw new InvalidOperationException("Failed to start Windows Firewall management console");
+                var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "wf.msc",
+                    UseShellExecute = true
+                });
+                
+                if (process == null)
+                {
+                    throw new InvalidOperationException("Failed to start Windows Firewall management console");
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            // FIXED: Log the exception instead of silent fail
-            // Note: We don't have logger here, but we should avoid silent failures
-            System.Diagnostics.Debug.WriteLine($"Failed to open Windows Firewall with Advanced Security: {ex.Message}");
-            
-            // Consider showing user-friendly message in a real application
-            // _dialogService?.ShowError("Could not open Windows Firewall management console. " +
-            //     "Please open it manually from Control Panel.");
+            catch (Exception ex)
+            {
+                // FIXED: Log the exception instead of silent fail
+                // Note: We don't have logger here, but we should avoid silent failures
+                System.Diagnostics.Debug.WriteLine($"Failed to open Windows Firewall with Advanced Security: {ex.Message}");
+                
+                // Consider showing user-friendly message in a real application
+                // _dialogService?.ShowError("Could not open Windows Firewall management console. " +
+                //     "Please open it manually from Control Panel.");
+            }
         }
     }
 } 
