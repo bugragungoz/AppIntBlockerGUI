@@ -21,19 +21,19 @@ namespace AppIntBlockerGUI.Services
             ILoggingService logger,
             CancellationToken cancellationToken);
 
-        Task<bool> RemoveExistingRules(string applicationName, ILoggingService logger);
+        Task<bool> RemoveExistingRules(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default);
 
-        Task<bool> RemoveSingleRule(string ruleName, ILoggingService logger);
+        Task<bool> RemoveSingleRule(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default);
 
-        Task<List<string>> GetExistingRulesAsync(ILoggingService logger);
+        Task<List<string>> GetExistingRulesAsync(ILoggingService logger, CancellationToken cancellationToken = default);
 
-        Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger);
+        Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger, CancellationToken cancellationToken = default);
 
-        Task<List<FirewallRuleModel>> GetAllFirewallRulesAsync();
+        Task<List<FirewallRuleModel>> GetAllFirewallRulesAsync(CancellationToken cancellationToken = default);
 
-        Task<bool> DeleteRuleAsync(string ruleName);
+        Task<bool> DeleteRuleAsync(string ruleName, CancellationToken cancellationToken = default);
 
-        Task<bool> ToggleRuleAsync(string ruleName, bool enable);
+        Task<bool> ToggleRuleAsync(string ruleName, bool enable, CancellationToken cancellationToken = default);
 
         void OpenWindowsFirewallWithAdvancedSecurity();
     }
