@@ -1,10 +1,4 @@
----
-layout: default
-title: API Documentation
-permalink: /api/
----
-
-# API Documentation
+# AppIntBlockerGUI API Documentation
 
 This document provides detailed information about the services, interfaces, and architecture of AppIntBlockerGUI v1.0.
 
@@ -76,6 +70,46 @@ public interface INavigationService
 - Event-driven navigation updates
 - Automatic view resolution through DataTemplates
 
+### IThemeService
+**Location**: `Services/IThemeService.cs`
+
+Handles dynamic theme switching and theme management.
+
+```csharp
+public interface IThemeService
+{
+    Theme GetCurrentTheme();
+    void SetTheme(Theme theme);
+    event Action<Theme>? ThemeChanged;
+}
+```
+
+**Supported Themes:**
+- `NulnOilGloss`: Dark theme with warm brown tones
+- `Light`: Light theme (future implementation)
+
+### ILoggingService
+**Location**: `Services/ILoggingService.cs`
+
+Provides comprehensive logging capabilities.
+
+```csharp
+public interface ILoggingService
+{
+    void LogInfo(string message);
+    void LogWarning(string message);
+    void LogError(string message);
+    void LogDebug(string message);
+    Task<List<string>> GetRecentLogsAsync(int count = 100);
+}
+```
+
+**Log Levels:**
+- **Info**: General information
+- **Warning**: Non-critical issues
+- **Error**: Error conditions
+- **Debug**: Detailed diagnostic information
+
 ### IDialogService
 **Location**: `Services/IDialogService.cs`
 
@@ -128,6 +162,23 @@ public class AppSettings
 }
 ```
 
+## Value Converters
+
+### EnabledToColorConverter
+**Location**: `Converters/EnabledToColorConverter.cs`
+
+Converts boolean enabled state to color brushes.
+
+```csharp
+// Usage in XAML
+<TextBlock Foreground="{Binding IsEnabled, Converter={StaticResource EnabledToColorConverter}}" />
+```
+
+### LogHighlightConverter
+**Location**: `Converters/LogHighlightConverter.cs`
+
+Provides color highlighting for log entries based on severity.
+
 ## ViewModels
 
 ### MainWindowViewModel
@@ -148,6 +199,12 @@ public class AppSettings
 - Rule listing and filtering
 - Rule modification and deletion
 - Bulk operations
+
+### RestorePointsViewModel
+**Responsibilities:**
+- Backup creation and management
+- System restoration
+- Backup validation
 
 ## Event Flow
 
@@ -189,6 +246,24 @@ public class AppSettings
 3. Register in `App.xaml.cs` DI configuration
 4. Inject into ViewModels as needed
 
+### Theme Extensions
+1. Create new theme resource dictionary in `Resources/Themes/`
+2. Add theme enum value to `Theme` enum
+3. Update `ThemeService` to handle new theme
+4. Add theme switching logic in UI
+
+## Error Handling
+
+### Global Exception Handling
+- `App.xaml.cs` contains global exception handlers
+- All exceptions are logged via `ILoggingService`
+- User-friendly error dialogs via `IDialogService`
+
+### Service-Level Error Handling
+- All async operations use try-catch blocks
+- Specific exception types handled appropriately
+- Fallback behaviors for critical operations
+
 ## Performance Considerations
 
 ### Rule Loading Optimization
@@ -203,4 +278,4 @@ public class AppSettings
 
 ---
 
-**For implementation examples and detailed code samples, see the source code in the [GitHub repository](https://github.com/bugragungoz/AppIntBlockerGUI).**
+**For implementation examples and detailed code samples, see the source code in the `src/AppIntBlockerGUI/` directory.** 
