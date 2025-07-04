@@ -9,8 +9,10 @@ namespace AppIntBlockerGUI.Services
     using System.Diagnostics;
     using System.Linq;
     using System.Management;
+    using System.Runtime.Versioning;
     using System.Threading.Tasks;
 
+    [SupportedOSPlatform("windows")]
     public class SystemRestoreService : ISystemRestoreService
     {
         public class RestorePoint
