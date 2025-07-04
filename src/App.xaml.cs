@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using AppIntBlockerGUI.Core;
 using Microsoft.Extensions.ObjectPool;
 using System.Management.Automation;
+using System.Runtime.Versioning;
 
 namespace AppIntBlockerGUI;
 
@@ -38,10 +39,22 @@ public partial class App : Application
 
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
         {
-            var ex = e.ExceptionObject as Exception;
-            MessageBox.Show(
-                $"Fatal Exception: {ex?.Message}\n\nStack Trace:\n{ex?.StackTrace}",
-                "Fatal Exception", MessageBoxButton.OK, MessageBoxImage.Error);
+            if (e.ExceptionObject is Exception ex)
+            {
+                // Log the full, unsanitized exception
+                Debug.WriteLine($"[FATAL] Unhandled AppDomain Exception: {ex}");
+
+                // Show a sanitized, user-friendly message
+                var userFriendlyMessage = SanitizeErrorMessage(ex);
+                MessageBox.Show(
+                    $"{userFriendlyMessage}\n\nError ID: {Guid.NewGuid():N}\n\nThe application will now close.",
+                    "Fatal Application Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+
+            // It's critical to shut down after a fatal non-UI thread exception
+            Current.Dispatcher.Invoke(() => Current.Shutdown());
         };
 
         var services = new ServiceCollection();
@@ -95,11 +108,15 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                // Log the exception and show user-friendly message
+                // Log the full exception for debugging
+                Debug.WriteLine($"[FATAL] Application initialization failed: {ex}");
+
+                // Sanitize the error message before showing it to the user
+                var userFriendlyMessage = SanitizeErrorMessage(ex);
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MessageBox.Show(
-                        $"Application initialization failed: {ex.Message}",
+                        $"Application initialization failed: {userFriendlyMessage}",
                         "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     Application.Current.Shutdown(1);
                 });
@@ -107,6 +124,7 @@ public partial class App : Application
         });
     }
 
+    [SupportedOSPlatform("windows")]
     private async Task InitializeApplicationAsync()
     {
         // If already running as admin, proceed directly to loading.
@@ -175,6 +193,7 @@ public partial class App : Application
         });
     }
 
+    [SupportedOSPlatform("windows")]
     public static bool IsRunAsAdministrator()
     {
         using (var identity = WindowsIdentity.GetCurrent())
@@ -184,6 +203,7 @@ public partial class App : Application
         }
     }
 
+    [SupportedOSPlatform("windows")]
     private bool RestartAsAdministrator()
     {
         string? exeName = Process.GetCurrentProcess().MainModule?.FileName;

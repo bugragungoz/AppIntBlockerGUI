@@ -16,18 +16,20 @@ namespace AppIntBlockerGUI.Services
     using AppIntBlockerGUI.Services;
     using System.Text.RegularExpressions;
     using Microsoft.Extensions.ObjectPool;
+    using System.Runtime.Versioning;
 
+    [SupportedOSPlatform("windows")]
     public class FirewallService : IFirewallService
     {
         private const string RuleNamePrefix = "AppBlocker Rule - ";
         private readonly ILoggingService _loggingService;
         private readonly ObjectPool<PowerShell> _powerShellPool;
 
-            public FirewallService(ILoggingService loggingService, ObjectPool<PowerShell> powerShellPool)
-    {
-        _loggingService = loggingService;
-        _powerShellPool = powerShellPool;
-    }
+        public FirewallService(ILoggingService loggingService, ObjectPool<PowerShell> powerShellPool)
+        {
+            _loggingService = loggingService;
+            _powerShellPool = powerShellPool;
+        }
 
         public async Task<bool> BlockApplicationFiles(
             string path,
