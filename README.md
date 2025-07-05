@@ -30,6 +30,18 @@ AppIntBlockerGUI is a sophisticated Windows application that provides an intuiti
 
 Developed with the assistance of advanced AI models including Claude 4 Sonnet and Gemini 2.5 Pro to ensure modern architectural patterns and best practices.
 
+## Download (Windows)
+
+Pre-built, self-contained Windows binaries are published with every GitHub release.
+
+1. Visit the [Releases](https://github.com/bugragungoz/AppIntBlockerGUI/releases) page.
+2. Download the ZIP that matches your CPU architecture (e.g. `AppIntBlockerGUI-v1.1.0-win-x64.zip`).
+3. Unzip the archive to any folder.
+4. Double-click `AppIntBlockerGUI.exe` to launch the application.  
+   No separate .NET runtime installation is required.
+
+> Keep all extracted files together; removing any DLLs may prevent the program from launching.
+
 ## Features
 
 ### Core Functionality
@@ -48,7 +60,7 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 - **Logging System**: Detailed application logging
 - **Performance Optimized**: Efficient rule scanning and management
 
-## Quick Start
+## Build from Source (Quick Start)
 
 ### Prerequisites
 - Windows 10/11
@@ -208,7 +220,7 @@ Critical security vulnerabilities and major bugs were addressed with the help of
 - **Unit Test Suite:** A robust test suite for `FirewallService` has been added, using MSTest and Moq for enhanced reliability.
 - **CI/CD Pipeline:** A GitHub Actions workflow now automatically builds and tests the project on every push and pull request.
 - **Architectural Refactor:** `FirewallService` now depends on an `IPowerShellWrapper` interface, decoupling it from `System.Management.Automation.PowerShell` and significantly improving flexibility and testability.
-- **UI Improvements:** The loading indicator in the “Manage Rules” view now shows dynamic status text (e.g., “Refreshing rules...”).
+- **UI Improvements:** The loading indicator in the "Manage Rules" view now shows dynamic status text (e.g., "Refreshing rules...").
 - **Bug Fixes:** Improved UI feedback during long-running background tasks.
 
 > For the full list of technical changes, see [CHANGELOG.md](CHANGELOG.md).
