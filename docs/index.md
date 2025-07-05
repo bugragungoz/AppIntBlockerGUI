@@ -2,19 +2,19 @@
 
 # AppIntBlockerGUI v1.0
 
-![Block Application View](src/images/blockApplication.png)
+![Block Application View](assets/images/blockApplication.png)
 
 ### Additional Views
 
 | Manage Rules | Restore Points | Windows Firewall | Settings (General) | Settings (Theme) |
 | :---: | :---: | :---: | :---: | :---: |
-| ![Manage Rules View](src/images/manageRules.png) | ![Restore Points View](src/images/restorePoints.png) | ![Windows Firewall View](src/images/windowsFirewall.png) | ![Settings View 1](src/images/settings1.png) | ![Settings View 2](src/images/settings2.png) |
+| ![Manage Rules View](assets/images/manageRules.png) | ![Restore Points View](assets/images/restorePoints.png) | ![Windows Firewall View](assets/images/windowsFirewall.png) | ![Settings View 1](assets/images/settings1.png) | ![Settings View 2](assets/images/settings2.png) |
 
 ### Loading & Dialogs
 
 | Loading Screen | Admin Privileges | Permission Denied | Operation Cancelled |
 | :---: | :---: | :---: | :---: |
-| ![Loading Screen](src/images/loadingScreen.png) | ![Admin Privileges](src/images/adminPrivileges.png) | ![Permission Denied](src/images/permissionDenied.png) | ![Operation Cancelled](src/images/operationCancelled.png) |
+| ![Loading Screen](assets/images/loadingScreen.png) | ![Admin Privileges](assets/images/adminPrivileges.png) | ![Permission Denied](assets/images/permissionDenied.png) | ![Operation Cancelled](assets/images/operationCancelled.png) |
 
 
 **Professional Windows Application Firewall Manager with Modern UI**
@@ -87,13 +87,12 @@ dotnet run
 ```
 AppIntBlockerGUI/
 ├── src/
-│   └── AppIntBlockerGUI/          # Main WPF application
-│       ├── ViewModels/            # MVVM ViewModels
-│       ├── Views/                 # WPF Views and UserControls
-│       ├── Services/              # Business logic and services
-│       ├── Models/                # Data models
-│       ├── Converters/            # Value converters
-│       └── Resources/             # Themes and resources
+│   ├── ViewModels/                # MVVM ViewModels
+│   ├── Views/                     # WPF Views and UserControls
+│   ├── Services/                  # Business logic and services
+│   ├── Models/                    # Data models
+│   ├── Converters/                # Value converters
+│   └── Resources/                 # Themes and resources
 ├── docs/                          # Documentation
 │   ├── api.md
 │   ├── bug_fixes_applied.md
@@ -139,7 +138,7 @@ Logs are automatically created in the `Logs/` directory. Configure logging level
 ```bash
 # Clone repository
 git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
-cd AppIntBlockerGUI/src/AppIntBlockerGUI
+cd AppIntBlockerGUI/src
 
 # Restore dependencies
 dotnet restore
@@ -178,7 +177,7 @@ The use of AI tools enabled rapid prototyping, adherence to modern development p
 
 ## Security & Bug Fixes (2025)
 
-In 2025, critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `SECURITY_ANALYSIS.md` and `BUG_FIXES_APPLIED.md`.
+In 2025, critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `SECURITY_ANALYSIS.md` and `bug_fixes_applied.md`.
 
 - Command-line (netsh) and PowerShell injection vulnerabilities fixed
 - Path traversal and input validation significantly improved
