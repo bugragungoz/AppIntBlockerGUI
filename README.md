@@ -52,7 +52,6 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 
 ### Prerequisites
 - Windows 10/11
-- .NET 8.0 Runtime
 - .NET 8.0 SDK or Runtime
 - Git (command-line tool)
 - Administrator privileges (the application will request them automatically)
