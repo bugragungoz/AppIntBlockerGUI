@@ -192,16 +192,26 @@ This project was developed with the assistance of advanced AI models:
 
 The use of AI tools enabled rapid prototyping, adherence to modern development patterns, and comprehensive documentation while maintaining high code quality standards.
 
-## Security & Bug Fixes (2025)
+## Security & Bug Fixes (initial update and analysis)
 
-In 2025, critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `docs/SECURITY_ANALYSIS.md` and `docs/bug_fixes_applied.md`.
+Critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `docs/SECURITY_ANALYSIS.md` and `docs/bug_fixes_applied.md`.
 
 - Command-line (netsh) and PowerShell injection vulnerabilities fixed
 - Path traversal and input validation significantly improved
 - Error message sanitization to prevent sensitive data leaks
 - Settings file is now encrypted (DPAPI)
 
-> These security patches and fixes were proposed and implemented with the assistance of AI tools.
+
+## v1.1.0 Release Notes (2025-07-04)
+
+- **Cancellation Support:** Long-running operations such as refreshing firewall rules can now be cancelled by the user.
+- **Unit Test Suite:** A robust test suite for `FirewallService` has been added, using MSTest and Moq for enhanced reliability.
+- **CI/CD Pipeline:** A GitHub Actions workflow now automatically builds and tests the project on every push and pull request.
+- **Architectural Refactor:** `FirewallService` now depends on an `IPowerShellWrapper` interface, decoupling it from `System.Management.Automation.PowerShell` and significantly improving flexibility and testability.
+- **UI Improvements:** The loading indicator in the “Manage Rules” view now shows dynamic status text (e.g., “Refreshing rules...”).
+- **Bug Fixes:** Improved UI feedback during long-running background tasks.
+
+> For the full list of technical changes, see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
