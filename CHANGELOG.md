@@ -86,7 +86,7 @@ This version was developed with the assistance of:
 - [ ] Improved error reporting and diagnostics
 - [ ] PowerShell module integration
 - [ ] Group Policy support
-- [ ] Network monitoring dashboard
+- [x] Network monitoring dashboard
 - [ ] Scheduled rule management
 
 ### v2.0.0 (Future)
@@ -100,6 +100,22 @@ This version was developed with the assistance of:
 - Settings file encryption (DPAPI)
 - Build and compatibility issues resolved
 - Refactoring completed while preserving GUI and core functionality
+
+## [1.2.0] - 2025-07-07
+### Added
+- **Network Monitor Dashboard**: A new view that displays real-time upload/download rates per running process and a live 60-second bandwidth graph powered by LiveCharts2.
+- **Internet Block / Unblock**: One-click toggle to create or remove firewall rules for the selected process directly from the dashboard.
+- **Performance-based Counters**: Uses Windows `PerformanceCounter` API to obtain accurate per-process byte counters.
+- **Aggregate Statistics**: Header now shows total current throughput and cumulative data transferred since monitoring started.
+- **Alert Thresholds**: Logs a warning if combined throughput exceeds 5 Mbps (configurable).
+
+### Changed
+- Registered `INetworkMonitorService` and `NetworkMonitorViewModel` in the DI container.
+- Sidebar now contains a "Network Monitor" navigation option.
+- Added LiveCharts2 dependency (`LiveChartsCore.SkiaSharpView.WPF`).
+
+### Removed
+- The "Network monitoring dashboard" item from the upcoming features list – it is now implemented.
 
 ---
 

@@ -1,0 +1,81 @@
+<UserControl x:Class="AppIntBlockerGUI.Views.NetworkMonitorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:lvc="http://schemas.livecharts.dev/2.0"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#f5f0eb"/>
+        </Style>
+        <Style x:Key="HeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#eebb88"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header and Stats -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Network Monitor" Style="{StaticResource HeaderStyle}"/>
+            <TextBlock Text="Live per-process bandwidth usage"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Left">
+                <TextBlock Text="Total ⬆:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalUploadKbps, StringFormat={}{0:F0} kbit/s}" Margin="5,0,20,0"/>
+                <TextBlock Text="Total ⬇:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalDownloadKbps, StringFormat={}{0:F0} kbit/s}" Margin="5,0,20,0"/>
+                <TextBlock Text="Sent:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalUploadedMb, StringFormat={}{0:F1} MB}" Margin="5,0,20,0"/>
+                <TextBlock Text="Received:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalDownloadedMb, StringFormat={}{0:F1} MB}" Margin="5,0,0,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Chart -->
+        <lvc:CartesianChart Grid.Row="1"
+                            Series="{Binding ChartSeries}"
+                            XAxes="{Binding XAxes}"
+                            YAxes="{Binding YAxes}"
+                            Height="200" />
+
+        <!-- DataGrid -->
+        <Border Grid.Row="2" Background="#2a2623" BorderBrush="#3c3835" BorderThickness="1" CornerRadius="8" Padding="10">
+            <DataGrid ItemsSource="{Binding Usages}"
+                      SelectedItem="{Binding SelectedProcess}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      Background="#171310"
+                      Foreground="#f5f0eb"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
+                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="*"/>
+                    <DataGridTextColumn Header="Upload (kbit/s)" Binding="{Binding UploadKbps, StringFormat={}{0:F1}}" Width="*"/>
+                    <DataGridTextColumn Header="Download (kbit/s)" Binding="{Binding DownloadKbps, StringFormat={}{0:F1}}" Width="*"/>
+                    <DataGridTextColumn Header="Sent (MB)" Binding="{Binding TotalSentMB, StringFormat={}{0:F1}}" Width="*"/>
+                    <DataGridTextColumn Header="Received (MB)" Binding="{Binding TotalReceivedMB, StringFormat={}{0:F1}}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Controls -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,20,0,0">
+            <Button Content="{Binding BlockButtonText}"
+                    Command="{Binding ToggleBlockCommand}"
+                    Style="{StaticResource ModernButtonStyle}"
+                    MinWidth="140" />
+        </StackPanel>
+    </Grid>
+</UserControl>
