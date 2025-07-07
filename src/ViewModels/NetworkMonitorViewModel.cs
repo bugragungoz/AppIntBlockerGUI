@@ -102,6 +102,20 @@ namespace AppIntBlockerGUI.ViewModels
         public Axis[] XAxes { get; }
         public Axis[] YAxes { get; }
 
+        [ObservableProperty]
+        private double totalUploadKbps;
+
+        [ObservableProperty]
+        private double totalDownloadKbps;
+
+        [ObservableProperty]
+        private double totalUploadedMb;
+
+        [ObservableProperty]
+        private double totalDownloadedMb;
+
+        private const double AlertThresholdKbps = 5000; // 5 Mbps
+
         /// <summary>
         /// Called by the <see cref="Services.NavigationService"/> when navigation switches to this view.
         /// We start monitoring here so that resources are used only when the page is visible.
@@ -137,6 +151,17 @@ namespace AppIntBlockerGUI.ViewModels
             var elapsed = (DateTime.UtcNow - this.graphStartTime).TotalSeconds;
             this.uploadSeriesValues.Add(new LiveChartsCore.Measure.ObservablePoint(elapsed, this.SelectedProcess.UploadKbps));
             this.downloadSeriesValues.Add(new LiveChartsCore.Measure.ObservablePoint(elapsed, this.SelectedProcess.DownloadKbps));
+
+            // Update aggregates
+            this.TotalUploadKbps = this.networkMonitorService.Usages.Sum(u => u.UploadKbps);
+            this.TotalDownloadKbps = this.networkMonitorService.Usages.Sum(u => u.DownloadKbps);
+            this.TotalUploadedMb = this.networkMonitorService.Usages.Sum(u => u.TotalSentMB);
+            this.TotalDownloadedMb = this.networkMonitorService.Usages.Sum(u => u.TotalReceivedMB);
+
+            if (this.TotalDownloadKbps > AlertThresholdKbps || this.TotalUploadKbps > AlertThresholdKbps)
+            {
+                this.loggingService.LogWarning($"Throughput exceeded {AlertThresholdKbps / 1000} Mbps");
+            }
 
             // Keep only last 60 points
             if (this.uploadSeriesValues.Count > 60)

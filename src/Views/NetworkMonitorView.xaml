@@ -26,10 +26,20 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!-- Header and Stats -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
             <TextBlock Text="Network Monitor" Style="{StaticResource HeaderStyle}"/>
             <TextBlock Text="Live per-process bandwidth usage"/>
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Left">
+                <TextBlock Text="Total ⬆:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalUploadKbps, StringFormat={}{0:F0} kbit/s}" Margin="5,0,20,0"/>
+                <TextBlock Text="Total ⬇:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalDownloadKbps, StringFormat={}{0:F0} kbit/s}" Margin="5,0,20,0"/>
+                <TextBlock Text="Sent:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalUploadedMb, StringFormat={}{0:F1} MB}" Margin="5,0,20,0"/>
+                <TextBlock Text="Received:" Foreground="#eebb88"/>
+                <TextBlock Text="{Binding TotalDownloadedMb, StringFormat={}{0:F1} MB}" Margin="5,0,0,0"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- Chart -->
