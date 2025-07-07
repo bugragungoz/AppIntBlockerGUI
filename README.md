@@ -208,10 +208,20 @@ Critical security vulnerabilities and major bugs were addressed with the help of
 - **Unit Test Suite:** A robust test suite for `FirewallService` has been added, using MSTest and Moq for enhanced reliability.
 - **CI/CD Pipeline:** A GitHub Actions workflow now automatically builds and tests the project on every push and pull request.
 - **Architectural Refactor:** `FirewallService` now depends on an `IPowerShellWrapper` interface, decoupling it from `System.Management.Automation.PowerShell` and significantly improving flexibility and testability.
-- **UI Improvements:** The loading indicator in the “Manage Rules” view now shows dynamic status text (e.g., “Refreshing rules...”).
+- **UI Improvements:** The loading indicator in the "Manage Rules" view now shows dynamic status text (e.g., "Refreshing rules...").
 - **Bug Fixes:** Improved UI feedback during long-running background tasks.
 
 > For the full list of technical changes, see [CHANGELOG.md](CHANGELOG.md).
+
+## v1.2.0 Release Notes (2025-07-07)
+
+- **Network Monitor Dashboard:** New page that displays real-time per-process upload/download speeds with a 60-second live graph.
+- **Internet Block/Unblock:** One-click toggle to add or remove firewall rules for the selected process.
+- **LiveCharts2 Integration:** LiveCharts Core (SkiaSharp) powers smooth, animated graphs.
+- **Aggregate Stats Panel:** Header shows total bandwidth usage and cumulative MB sent/received during the session.
+- **Throughput Alerts:** Application logs a warning when total throughput exceeds 5 Mbps.
+
+> See the full technical list in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
