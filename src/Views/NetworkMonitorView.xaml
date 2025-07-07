@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:lvc="http://schemas.livecharts.dev/2.0"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900">
 
@@ -20,6 +21,7 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -30,8 +32,15 @@
             <TextBlock Text="Live per-process bandwidth usage"/>
         </StackPanel>
 
+        <!-- Chart -->
+        <lvc:CartesianChart Grid.Row="1"
+                            Series="{Binding ChartSeries}"
+                            XAxes="{Binding XAxes}"
+                            YAxes="{Binding YAxes}"
+                            Height="200" />
+
         <!-- DataGrid -->
-        <Border Grid.Row="1" Background="#2a2623" BorderBrush="#3c3835" BorderThickness="1" CornerRadius="8" Padding="10">
+        <Border Grid.Row="2" Background="#2a2623" BorderBrush="#3c3835" BorderThickness="1" CornerRadius="8" Padding="10">
             <DataGrid ItemsSource="{Binding Usages}"
                       SelectedItem="{Binding SelectedProcess}"
                       AutoGenerateColumns="False"
@@ -52,7 +61,7 @@
         </Border>
 
         <!-- Controls -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,20,0,0">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,20,0,0">
             <Button Content="{Binding BlockButtonText}"
                     Command="{Binding ToggleBlockCommand}"
                     Style="{StaticResource ModernButtonStyle}"
