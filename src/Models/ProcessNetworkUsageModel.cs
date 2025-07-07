@@ -46,5 +46,15 @@ namespace AppIntBlockerGUI.Models
         /// Gets the timestamp of the last sample when this model was updated.
         /// </summary>
         public DateTime LastUpdatedUtc { get; internal set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Gets the total sent data in megabytes.
+        /// </summary>
+        public double TotalSentMB => this.TotalSentBytes / 1048576.0;
+
+        /// <summary>
+        /// Gets the total received data in megabytes.
+        /// </summary>
+        public double TotalReceivedMB => this.TotalReceivedBytes / 1048576.0;
     }
 }

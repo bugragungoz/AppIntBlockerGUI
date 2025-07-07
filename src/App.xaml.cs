@@ -53,6 +53,7 @@ namespace AppIntBlockerGUI
                     services.AddSingleton<SettingsViewModel>();
                     services.AddSingleton<WindowsFirewallViewModel>();
                     services.AddSingleton<RestorePointsViewModel>();
+                    services.AddSingleton<NetworkMonitorViewModel>();
 
                     services.AddSingleton<ObjectPool<PowerShell>>(serviceProvider =>
                     {
