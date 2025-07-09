@@ -60,46 +60,36 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 
 ### Installation
 
-**0. Install Git & .NET 8 SDK (if you don't have them)**
+1.  Go to the [Releases](https://github.com/your-username/AppIntBlockerGUI/releases) page.
+2.  Download the latest installer (`.msi` or `.exe`).
+3.  Run the installer and follow the on-screen instructions.
 
-*Install both quickly using Windows Package Manager (winget):*
+### Dependencies
 
-```powershell
-winget install --id Git.Git -e --source winget && winget install --id Microsoft.DotNet.SDK.8 -e --source winget
-```
+- **.NET Desktop Runtime**: The application requires the .NET 8 (or newer) Desktop Runtime. You can download it from the [official .NET website](https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
+- **Npcap for Network Monitoring**: The "Network Monitor" feature requires the **Npcap** driver to be installed on your system. This is a safe and standard tool used by many network applications, including Wireshark. You can download it from the [official Npcap website](https://npcap.com/). Please ensure you install it in **WinPcap API-Compatible Mode**.
 
-*Or install manually:*
+## Features
 
-- Git: https://git-scm.com/downloads  
-- .NET 8 SDK: https://dotnet.microsoft.com/download
+-   **Block Application**: Easily select an application (`.exe`) to block its internet access.
 
-<br/>
+### Core Functionality
+- **Application Blocking**: Easily block applications from network access
+- **Rule Management**: Create, edit, and delete firewall rules with advanced options
+- **Network Monitor**: Real-time dashboard showing per-process bandwidth usage with a live graph.
+- **One-Click Blocking**: Instantly block or unblock any process from the network monitor.
+- **Restore Points**: Create and restore firewall configuration snapshots
+- **Windows Firewall Integration**: Direct integration with Windows Firewall API
+- **Real-time Monitoring**: Live status updates and rule validation
+- **Administrator Privilege Management**: Automatic privilege checking and elevation
 
-**1. Open a Terminal**
-
-*Open your terminal or command prompt (e.g., PowerShell, Windows Terminal, or CMD).*
-
-
-**2. Clone the Repository**
-```bash
-git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
-```
-
-**3. Navigate to the Source Directory**
-```bash
-cd AppIntBlockerGUI/src
-```
-
-**4. Build the Application**
-```bash
-dotnet build
-```
-
-**5. Run the Application**
-```bash
-dotnet run
-```
-*The application will automatically request administrator privileges if needed.*
+### Technical Excellence
+- **MVVM Architecture**: Clean separation of concerns
+- **Dependency Injection**: Microsoft.Extensions.DependencyInjection
+- **Async/Await Patterns**: Non-blocking UI operations
+- **Error Handling**: Comprehensive exception management
+- **Logging System**: Detailed application logging
+- **Performance Optimized**: Efficient rule scanning and management
 
 ## Project Structure
 
@@ -228,4 +218,4 @@ Critical security vulnerabilities and major bugs were addressed with the help of
 
 ---
 
-**croxz** 
+**croxz**

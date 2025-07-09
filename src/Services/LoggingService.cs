@@ -7,32 +7,15 @@ namespace AppIntBlockerGUI.Services
     using System;
     using System.IO;
     using Serilog;
+    using System.Collections.ObjectModel;
 
     public class LoggingService : ILoggingService
     {
-        private readonly ILogger logger;
+        private readonly Serilog.ILogger logger;
+        private readonly ObservableCollection<string> logEntries = new();
         private readonly object eventLock = new object();
 
-        private event Action<string>? logEntryAdded;
-
-        public event Action<string> LogEntryAdded
-        {
-            add
-            {
-                lock (this.eventLock)
-                {
-                    this.logEntryAdded += value;
-                }
-            }
-
-            remove
-            {
-                lock (this.eventLock)
-                {
-                    this.logEntryAdded -= value;
-                }
-            }
-        }
+        public event Action<string> LogEntryAdded = delegate { };
 
         public LoggingService()
         {
@@ -56,7 +39,7 @@ namespace AppIntBlockerGUI.Services
             Action<string>? handler;
             lock (this.eventLock)
             {
-                handler = this.logEntryAdded;
+                handler = this.LogEntryAdded;
             }
 
             // Invoke on UI thread if needed
@@ -102,9 +85,26 @@ namespace AppIntBlockerGUI.Services
 
         public void LogDebug(string message)
         {
-            var logEntry = $"[{DateTime.Now:HH:mm:ss}] DEBUG: {message}";
             this.logger.Debug(message);
-            this.InvokeLogEntryAdded(logEntry);
+            // Optional: Decide if debug messages should appear in the UI log
+            // this.Log($"DEBUG: {message}");
+        }
+
+        public void LogCritical(string message, Exception? ex = null)
+        {
+            this.logger.Fatal(ex, message);
+            this.InvokeLogEntryAdded($"[{DateTime.Now:HH:mm:ss}] CRITICAL: {message}");
+        }
+
+        public ObservableCollection<string> GetLogs()
+        {
+            return new ObservableCollection<string>();
+        }
+
+        public void ClearLogs()
+        {
+            this.logEntries.Clear();
+            this.LogInfo("Logs have been cleared.");
         }
     }
 }

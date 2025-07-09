@@ -104,9 +104,9 @@ namespace AppIntBlockerGUI.ViewModels
 
         public SettingsViewModel()
         {
-            this.settingsService = new SettingsService();
             this.dialogService = new DialogService();
             this.loggingService = new LoggingService();
+            this.settingsService = new SettingsService(this.loggingService, this.dialogService);
 
             this.InitializeApplicationInfo();
             this.LoadSettings();

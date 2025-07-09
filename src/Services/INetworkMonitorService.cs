@@ -16,10 +16,16 @@ namespace AppIntBlockerGUI.Services
         ObservableCollection<ProcessNetworkUsageModel> Usages { get; }
 
         /// <summary>
-        /// Starts background monitoring. Calling multiple times has no effect if monitoring is already active.
+        /// Gets a list of available network devices for monitoring.
         /// </summary>
+        IReadOnlyList<string> GetAvailableDevices();
+
+        /// <summary>
+        /// Starts background monitoring on a specific device. Calling multiple times has no effect if monitoring is already active.
+        /// </summary>
+        /// <param name="deviceName">The friendly name of the device to monitor.</param>
         /// <param name="intervalMilliseconds">Sampling interval in milliseconds.</param>
-        void StartMonitoring(int intervalMilliseconds = 1000);
+        void StartMonitoring(string deviceName, int intervalMilliseconds = 1000);
 
         /// <summary>
         /// Stops the background monitoring thread and releases all unmanaged resources.

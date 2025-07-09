@@ -15,6 +15,13 @@ namespace AppIntBlockerGUI.Services
     [SupportedOSPlatform("windows")]
     public class SystemRestoreService : ISystemRestoreService
     {
+        private readonly ILoggingService loggingService;
+
+        public SystemRestoreService(ILoggingService loggingService)
+        {
+            this.loggingService = loggingService;
+        }
+
         public class RestorePoint
         {
             public uint SequenceNumber { get; set; }
@@ -30,127 +37,70 @@ namespace AppIntBlockerGUI.Services
 
         public async Task<bool> IsSystemRestoreEnabledAsync()
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                return await Task.Run(() =>
                 {
                     using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_SystemRestore"))
                     {
-                        // If we can query without errors, System Restore is likely enabled
                         var results = searcher.Get();
-                        return results != null;
+                        return results != null && results.Count > 0;
                     }
-                }
-                catch
-                {
-                    // If we get an exception, System Restore might be disabled
-                    return false;
-                }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError("System Restore might be disabled or an error occurred.", ex);
+                return false;
+            }
         }
 
         public async Task<List<RestorePoint>> GetRestorePointsAsync()
         {
-            return await Task.Run(() =>
+            var restorePoints = new List<RestorePoint>();
+            try
             {
-                var restorePoints = new List<RestorePoint>();
-
-                try
+                await Task.Run(() =>
                 {
                     using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_SystemRestore"))
                     {
-                        var results = searcher.Get();
-
-                        foreach (ManagementObject result in results)
+                        foreach (ManagementObject result in searcher.Get())
                         {
                             try
                             {
-                                var restorePoint = new RestorePoint();
-
-                                // Get sequence number
-                                if (uint.TryParse(result["SequenceNumber"]?.ToString(), out uint seqNum))
+                                restorePoints.Add(new RestorePoint
                                 {
-                                    restorePoint.SequenceNumber = seqNum;
-                                }
-
-                                // Get description
-                                restorePoint.Description = result["Description"]?.ToString() ?? "Unknown";
-
-                                // Get creation time
-                                var creationTimeStr = result["CreationTime"]?.ToString();
-                                if (!string.IsNullOrEmpty(creationTimeStr))
-                                {
-                                    // WMI datetime format: YYYYMMDDHHMMSS.mmmmmm+UUU
-                                    // CRITICAL FIX: Validate length before substring
-                                    if (creationTimeStr.Length >= 14)
-                                    {
-                                        if (DateTime.TryParseExact(
-                                            creationTimeStr.Substring(0, 14),
-                                            "yyyyMMddHHmmss", null, System.Globalization.DateTimeStyles.None, out DateTime creationTime))
-                                        {
-                                            restorePoint.CreationTime = creationTime;
-                                        }
-                                        else
-                                        {
-                                            restorePoint.CreationTime = DateTime.Now;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Fallback: try to parse the full string
-                                        if (DateTime.TryParse(creationTimeStr, out DateTime fallbackTime))
-                                        {
-                                            restorePoint.CreationTime = fallbackTime;
-                                        }
-                                        else
-                                        {
-                                            restorePoint.CreationTime = DateTime.Now;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    restorePoint.CreationTime = DateTime.Now;
-                                }
-
-                                // Get restore point type
-                                var restoreTypeCode = result["RestorePointType"]?.ToString();
-                                restorePoint.RestorePointType = this.GetRestorePointTypeDescription(restoreTypeCode);
-
-                                // Get event type
-                                var eventTypeCode = result["EventType"]?.ToString();
-                                restorePoint.EventType = this.GetEventTypeDescription(eventTypeCode);
-
-                                restorePoints.Add(restorePoint);
+                                    SequenceNumber = (uint)result["SequenceNumber"],
+                                    Description = result["Description"]?.ToString() ?? "Unknown",
+                                    CreationTime = ManagementDateTimeConverter.ToDateTime(result["CreationTime"]?.ToString() ?? string.Empty),
+                                    RestorePointType = this.GetRestorePointTypeDescription(result["RestorePointType"]?.ToString()),
+                                    EventType = this.GetEventTypeDescription(result["EventType"]?.ToString()),
+                                });
                             }
                             catch (Exception ex)
                             {
-                                // Log individual restore point processing errors but continue
-                                Debug.WriteLine($"Error processing restore point: {ex.Message}");
+                                this.loggingService.LogWarning($"Error processing a restore point, skipping. Details: {ex.Message}");
                             }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error getting restore points: {ex.Message}");
-                }
-
-                return restorePoints.OrderByDescending(rp => rp.CreationTime).ToList();
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError("Failed to retrieve system restore points.", ex);
+            }
+            return restorePoints.OrderByDescending(rp => rp.CreationTime).ToList();
         }
 
         public async Task<bool> CreateRestorePointAsync(string description)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                return await Task.Run(() =>
                 {
-                    // Use WMI to create a restore point
                     var scope = new ManagementScope(@"\\.\root\default");
                     var path = new ManagementPath("SystemRestore");
-                    var options = new ObjectGetOptions();
-                    var classObject = new ManagementClass(scope, path, options);
+                    var classObject = new ManagementClass(scope, path, new ObjectGetOptions());
 
                     var inParams = classObject.GetMethodParameters("CreateRestorePoint");
                     inParams["Description"] = description;
@@ -158,65 +108,55 @@ namespace AppIntBlockerGUI.Services
                     inParams["EventType"] = 100; // BEGIN_SYSTEM_CHANGE
 
                     var outParams = classObject.InvokeMethod("CreateRestorePoint", inParams, null);
-
-                    // Check return value (0 = success)
                     var returnValue = Convert.ToInt32(outParams["ReturnValue"]);
+                    if (returnValue != 0)
+                    {
+                        this.loggingService.LogWarning($"WMI CreateRestorePoint returned non-zero value: {returnValue}");
+                    }
                     return returnValue == 0;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error creating restore point: {ex.Message}");
-                    return false;
-                }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError($"Error creating restore point: {description}", ex);
+                return false;
+            }
         }
 
         public async Task<bool> RestoreSystemAsync(uint sequenceNumber)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                return await Task.Run(() =>
                 {
-                    // Use WMI to restore system to a specific restore point
                     var scope = new ManagementScope(@"\\.\root\default");
                     var path = new ManagementPath("SystemRestore");
-                    var options = new ObjectGetOptions();
-                    var classObject = new ManagementClass(scope, path, options);
+                    var classObject = new ManagementClass(scope, path, new ObjectGetOptions());
 
                     var inParams = classObject.GetMethodParameters("Restore");
                     inParams["SequenceNumber"] = sequenceNumber;
 
                     var outParams = classObject.InvokeMethod("Restore", inParams, null);
-
-                    // Check return value (0 = success)
                     var returnValue = Convert.ToInt32(outParams["ReturnValue"]);
+                    if (returnValue != 0)
+                    {
+                        this.loggingService.LogWarning($"WMI Restore returned non-zero value: {returnValue}");
+                    }
                     return returnValue == 0;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error restoring system: {ex.Message}");
-                    return false;
-                }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError($"Error restoring system to restore point {sequenceNumber}", ex);
+                return false;
+            }
         }
 
-        public async Task<bool> DeleteRestorePointAsync(uint sequenceNumber)
+        [Obsolete("Windows does not provide a direct WMI/API method to delete specific restore points.")]
+        public Task<bool> DeleteRestorePointAsync(uint sequenceNumber)
         {
-            // Note: Windows does not provide a direct WMI method to delete specific restore points
-            // This method exists for interface compatibility but will return false
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    // Windows doesn't provide an easy way to delete specific restore points via WMI
-                    // The user would need to use Disk Cleanup or vssadmin commands
-                    return false;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
+            this.loggingService.LogWarning("DeleteRestorePointAsync was called, but this feature is not supported by Windows. Returning false.");
+            return Task.FromResult(false);
         }
 
         private string GetRestorePointTypeDescription(string? typeCode)

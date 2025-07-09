@@ -83,6 +83,8 @@ namespace AppIntBlockerGUI.ViewModels
         partial void OnSelectedRuleChanged(FirewallRuleModel? value)
         {
             this.HasSelectedRule = value != null;
+            DeleteSelectedRuleCommand.NotifyCanExecuteChanged();
+            ToggleSelectedRuleCommand.NotifyCanExecuteChanged();
         }
 
         private void OnLogEntryAdded(string logEntry)
@@ -139,7 +141,9 @@ namespace AppIntBlockerGUI.ViewModels
             if (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
             {
                 cancellationTokenSource.Cancel();
-                loggingService.LogWarning("Operation canceled by user.");
+                this.loggingService.LogWarning("Operation canceled by user.");
+                this.IsLoading = false; // Immediately update loading state
+                RefreshAllCommands();
             }
         }
 
@@ -150,36 +154,157 @@ namespace AppIntBlockerGUI.ViewModels
             await this.LoadRulesAsync();
         }
 
+        [RelayCommand(CanExecute = nameof(CanExecuteOperation))]
         private async Task LoadRulesAsync()
         {
             this.IsLoading = true;
+            this.LoadingStatusText = "Loading firewall rules...";
             this.AllRules.Clear();
             this.loggingService.LogInfo("Loading firewall rules...");
 
+            // Ensure commands are re-evaluated
+            RefreshAllCommands();
+
             try
             {
-                var loadedRules = await this.firewallService.GetAllFirewallRulesAsync(cancellationTokenSource.Token);
-                foreach (var rule in loadedRules.OrderBy(r => r.DisplayName))
-                {
-                    this.AllRules.Add(rule);
-                }
+                var loadedRules = await this.firewallService.GetAllFirewallRulesAsync(this.cancellationTokenSource.Token);
 
-                this.loggingService.LogInfo($"Found {this.AllRules.Count} firewall rules.");
+                // Use Dispatcher to update collection on the UI thread
+                App.Current?.Dispatcher.Invoke(() =>
+                {
+                    foreach (var rule in loadedRules.OrderBy(r => r.DisplayName))
+                    {
+                        this.AllRules.Add(rule);
+                    }
+                    this.FilterRules(); // Apply current filter
+                    this.UpdateStatistics();
+                    this.loggingService.LogInfo($"Found {this.AllRules.Count} firewall rules.");
+                });
             }
             catch (OperationCanceledException)
             {
-                loggingService.LogWarning("Rule refresh operation was canceled.");
-                dialogService.ShowMessage("Operation was canceled.", "Canceled");
+                this.loggingService.LogWarning("Rule loading operation was canceled.");
             }
             catch (Exception ex)
             {
-                this.loggingService.LogError("Error refreshing firewall rules", ex);
-                this.dialogService.ShowMessage("Failed to refresh firewall rules. Check the log for details.", "Error");
+                this.loggingService.LogError("Error loading firewall rules", ex);
+                this.dialogService.ShowMessage("Failed to load firewall rules. Check the log for details.", "Error");
             }
             finally
             {
                 this.IsLoading = false;
+                RefreshAllCommands();
             }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanExecuteOperation))]
+        private async Task DeleteAllRulesAsync()
+        {
+            this.IsLoading = true;
+            this.LoadingStatusText = "Deleting all rules...";
+            RefreshAllCommands();
+
+            var result = this.dialogService.ShowConfirmation("Confirm Deletion", "Are you sure you want to delete all AppBlocker firewall rules? This action cannot be undone.");
+            if (!result)
+            {
+                this.IsLoading = false;
+                RefreshAllCommands();
+                return;
+            }
+
+            try
+            {
+                var ruleNames = this.AllRules.Select(r => r.RuleName).ToList();
+                foreach (var ruleName in ruleNames)
+                {
+                    this.cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    await this.firewallService.DeleteRuleAsync(ruleName, this.cancellationTokenSource.Token);
+                }
+                await LoadRulesAsync(); // Refresh list after deletion
+            }
+            catch (OperationCanceledException)
+            {
+                this.loggingService.LogWarning("Delete all rules operation was canceled.");
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError("Error deleting all rules", ex);
+                this.dialogService.ShowMessage("Failed to delete all rules. Check the log for details.", "Error");
+            }
+            finally
+            {
+                this.IsLoading = false;
+                RefreshAllCommands();
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanDeleteSelectedRule))]
+        private async Task DeleteSelectedRuleAsync()
+        {
+            if (this.SelectedRule == null) return;
+            
+            this.IsLoading = true;
+            this.LoadingStatusText = $"Deleting rule: {this.SelectedRule.RuleName}...";
+            RefreshAllCommands();
+            
+            try
+            {
+                await this.firewallService.RemoveSingleRule(this.SelectedRule.RuleName, this.cancellationTokenSource.Token);
+                this.AllRules.Remove(this.SelectedRule);
+                FilterRules();
+                UpdateStatistics();
+            }
+            catch (Exception ex)
+            {
+                 this.loggingService.LogError($"Error deleting rule: {this.SelectedRule.RuleName}", ex);
+                 this.dialogService.ShowMessage("Failed to delete the selected rule.", "Error");
+            }
+            finally
+            {
+                this.IsLoading = false;
+                RefreshAllCommands();
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanExecuteOperation))]
+        private async Task ToggleSelectedRuleAsync()
+        {
+            if (this.SelectedRule == null) return;
+
+            this.IsLoading = true;
+            this.LoadingStatusText = $"Toggling rule: {this.SelectedRule.RuleName}...";
+            RefreshAllCommands();
+            
+            try
+            {
+                var newState = !this.SelectedRule.IsEnabled;
+                var success = await this.firewallService.ToggleRuleAsync(this.SelectedRule.RuleName, newState, this.cancellationTokenSource.Token);
+                if (success)
+                {
+                    this.SelectedRule.IsEnabled = newState;
+                }
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError($"Error toggling rule: {this.SelectedRule.RuleName}", ex);
+                this.dialogService.ShowMessage("Failed to toggle the selected rule.", "Error");
+            }
+            finally
+            {
+                this.IsLoading = false;
+                RefreshAllCommands();
+            }
+        }
+
+        private bool CanExecuteOperation() => !this.IsLoading;
+        private bool CanDeleteSelectedRule() => this.SelectedRule != null && !this.IsLoading;
+
+        private void RefreshAllCommands()
+        {
+            LoadRulesCommand.NotifyCanExecuteChanged();
+            DeleteAllRulesCommand.NotifyCanExecuteChanged();
+            DeleteSelectedRuleCommand.NotifyCanExecuteChanged();
+            ToggleSelectedRuleCommand.NotifyCanExecuteChanged();
         }
 
         private FirewallRuleModel? ParseRuleFromName(string ruleName)
@@ -295,7 +420,7 @@ namespace AppIntBlockerGUI.ViewModels
                 {
                     try
                     {
-                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.loggingService, cancellationTokenSource.Token);
+                        return await this.firewallService.RemoveSingleRule(ruleToRemove, this.cancellationTokenSource.Token);
                     }
                     catch (OperationCanceledException)
                     {

@@ -17,12 +17,13 @@ namespace AppIntBlockerGUI.ViewModels
     using LiveChartsCore.Defaults; // Correct namespace for ObservablePoint
     using LiveChartsCore.SkiaSharpView;
     using LiveChartsCore.SkiaSharpView.Painting;
+    using LiveChartsCore.SkiaSharpView.WPF; // Add this using directive
     using SkiaSharp;
 
     /// <summary>
     /// ViewModel that exposes live per-process network statistics to the view.
     /// </summary>
-    public sealed partial class NetworkMonitorViewModel : ObservableObject, IDisposable
+    public sealed partial class NetworkMonitorViewModel : ObservableObject, IDisposable, INotifyNavigated
     {
         private readonly INetworkMonitorService networkMonitorService;
         private readonly IFirewallService firewallService;
@@ -33,6 +34,17 @@ namespace AppIntBlockerGUI.ViewModels
         private readonly ObservableCollection<ObservablePoint> downloadSeriesValues = new();
         private DateTime graphStartTime = DateTime.UtcNow;
         private readonly DispatcherTimer graphTimer;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(GraphTitle))]
+        private bool isGraphShowingTotal = true;
+        
+        public string GraphTitle => this.IsGraphShowingTotal ? "Total Network Traffic" : $"Traffic for {this.SelectedProcess?.ProcessName}";
+
+        public ObservableCollection<string> NetworkDevices { get; }
+        
+        [ObservableProperty]
+        private string? selectedNetworkDevice;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkMonitorViewModel"/> class.
@@ -54,16 +66,32 @@ namespace AppIntBlockerGUI.ViewModels
             {
                 new LineSeries<ObservablePoint>
                 {
-                    Values = this.uploadSeriesValues, Name = "Upload", Stroke = new SolidColorPaint(SKColors.SkyBlue, 2), Fill = null
+                    Name = "Download",
+                    Values = this.downloadSeriesValues,
+                    Stroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
+                    Fill = new LinearGradientPaint(SKColors.DodgerBlue.WithAlpha(90), SKColors.DodgerBlue.WithAlpha(10), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
+                    GeometrySize = 0,
+                    LineSmoothness = 0.6
                 },
                 new LineSeries<ObservablePoint>
                 {
-                    Values = this.downloadSeriesValues, Name = "Download", Stroke = new SolidColorPaint(SKColors.LimeGreen, 2), Fill = null
+                    Name = "Upload",
+                    Values = this.uploadSeriesValues,
+                    Stroke = new SolidColorPaint(SKColors.OrangeRed, 2),
+                    Fill = new LinearGradientPaint(SKColors.OrangeRed.WithAlpha(90), SKColors.OrangeRed.WithAlpha(10), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
+                    GeometrySize = 0,
+                    LineSmoothness = 0.6
                 }
             };
 
             this.XAxes = new Axis[] { new Axis { Labeler = value => $"{value:0}s", Name = "Time (s)" } };
             this.YAxes = new Axis[] { new Axis { Name = "kbit/s" } };
+
+            NetworkDevices = new ObservableCollection<string>(this.networkMonitorService.GetAvailableDevices());
+            if (NetworkDevices.Any())
+            {
+                SelectedNetworkDevice = NetworkDevices.First();
+            }
         }
 
         /// <summary>
@@ -100,50 +128,83 @@ namespace AppIntBlockerGUI.ViewModels
 
         private const double AlertThresholdKbps = 5000; // 5 Mbps
 
-        /// <summary>
-        /// Called by the <see cref="Services.NavigationService"/> when navigation switches to this view.
-        /// We start monitoring here so that resources are used only when the page is visible.
-        /// </summary>
-        public Task InitializeAsync()
+        public void OnNavigatedTo()
         {
-            if (!this.monitoringStarted)
+            NetworkDevices.Clear();
+            var devices = networkMonitorService.GetAvailableDevices();
+            foreach (var device in devices)
             {
-                this.networkMonitorService.StartMonitoring();
-                this.monitoringStarted = true;
-                this.graphStartTime = DateTime.UtcNow;
-                this.uploadSeriesValues.Clear();
-                this.downloadSeriesValues.Clear();
-                this.graphTimer.Start();
+                NetworkDevices.Add(device);
             }
 
-            return Task.CompletedTask;
+            if (!monitoringStarted && NetworkDevices.Any())
+            {
+                SelectedNetworkDevice = NetworkDevices.First();
+                networkMonitorService.StartMonitoring(SelectedNetworkDevice);
+                monitoringStarted = true;
+                graphTimer.Start();
+            }
         }
 
+        public void OnNavigatedFrom()
+        {
+            if (monitoringStarted)
+            {
+                graphTimer.Stop();
+                networkMonitorService.StopMonitoringAsync(CancellationToken.None).ConfigureAwait(false);
+                monitoringStarted = false;
+            }
+        }
+        
+        partial void OnSelectedNetworkDeviceChanged(string? value)
+        {
+            if (value != null)
+            {
+                loggingService.LogInfo($"Device selection changed. Monitoring '{value}'.");
+                networkMonitorService.StartMonitoring(value);
+                monitoringStarted = true;
+                if (!graphTimer.IsEnabled)
+                {
+                    graphTimer.Start();
+                }
+            }
+        }
+        
         public void Dispose()
         {
-            _ = this.networkMonitorService.StopMonitoringAsync();
-            this.graphTimer.Stop();
+            OnNavigatedFrom();
         }
 
         private void GraphTimer_Tick(object? sender, EventArgs e)
         {
-            if (this.SelectedProcess != null)
-            {
-                var elapsed = (DateTime.UtcNow - this.graphStartTime).TotalSeconds;
-                this.uploadSeriesValues.Add(new ObservablePoint(elapsed, this.SelectedProcess.UploadKbps));
-                this.downloadSeriesValues.Add(new ObservablePoint(elapsed, this.SelectedProcess.DownloadKbps));
-
-                if (this.uploadSeriesValues.Count > 60)
-                {
-                    this.uploadSeriesValues.RemoveAt(0);
-                    this.downloadSeriesValues.RemoveAt(0);
-                }
-            }
-
             this.TotalUploadKbps = this.networkMonitorService.Usages.Sum(u => u.UploadKbps);
             this.TotalDownloadKbps = this.networkMonitorService.Usages.Sum(u => u.DownloadKbps);
             this.TotalUploadedMb = this.networkMonitorService.Usages.Sum(u => u.TotalSentMB);
             this.TotalDownloadedMb = this.networkMonitorService.Usages.Sum(u => u.TotalReceivedMB);
+
+            var elapsed = (DateTime.UtcNow - this.graphStartTime).TotalSeconds;
+            double upload = 0;
+            double download = 0;
+
+            if (this.IsGraphShowingTotal)
+            {
+                upload = this.TotalUploadKbps;
+                download = this.TotalDownloadKbps;
+            }
+            else if (this.SelectedProcess != null)
+            {
+                upload = this.SelectedProcess.UploadKbps;
+                download = this.SelectedProcess.DownloadKbps;
+            }
+
+            this.uploadSeriesValues.Add(new ObservablePoint(elapsed, upload));
+            this.downloadSeriesValues.Add(new ObservablePoint(elapsed, download));
+
+            if (this.uploadSeriesValues.Count > 60)
+            {
+                this.uploadSeriesValues.RemoveAt(0);
+                this.downloadSeriesValues.RemoveAt(0);
+            }
 
             if (this.TotalDownloadKbps > AlertThresholdKbps || this.TotalUploadKbps > AlertThresholdKbps)
             {
@@ -153,6 +214,7 @@ namespace AppIntBlockerGUI.ViewModels
 
         partial void OnSelectedProcessChanged(ProcessNetworkUsageModel? value)
         {
+            this.IsGraphShowingTotal = value == null;
             this.uploadSeriesValues.Clear();
             this.downloadSeriesValues.Clear();
             this.graphStartTime = DateTime.UtcNow;
@@ -184,7 +246,7 @@ namespace AppIntBlockerGUI.ViewModels
                     return;
                 }
 
-                var rules = await this.firewallService.GetExistingRulesAsync(this.loggingService);
+                var rules = await this.firewallService.GetExistingRulesAsync();
                 this.IsSelectedProcessBlocked = rules.Any(r => r.Contains(appName, StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception ex)
@@ -223,6 +285,14 @@ namespace AppIntBlockerGUI.ViewModels
                 await this.UpdateBlockedStatusAsync();
                 this.ToggleBlockCommand.NotifyCanExecuteChanged();
             }
+        }
+
+        [RelayCommand]
+        private void BlockSelectedProcess()
+        {
+            // This command is not fully implemented in the original file,
+            // so it's left as a placeholder.
+            // The original ToggleBlockCommand handles the actual blocking/unblocking.
         }
     }
 }

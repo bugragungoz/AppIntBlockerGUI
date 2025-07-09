@@ -100,7 +100,7 @@ namespace AppIntBlockerGUI.ViewModels
             try
             {
                 this.SystemStatus = "Loading...";
-                var rules = await this.firewallService.GetExistingRulesAsync(this.loggingService);
+                var rules = await this.firewallService.GetExistingRulesAsync();
                 this.ActiveRulesCount = rules.Count.ToString();
                 this.SystemStatus = rules.Any() ? "Protecting" : "Standby";
                 this.LastUpdateTime = DateTime.Now.ToString("HH:mm:ss");
@@ -116,5 +116,22 @@ namespace AppIntBlockerGUI.ViewModels
         {
             this.uptimeTimer?.Stop();
         }
+
+        [RelayCommand]
+        private async Task CheckForUpdates()
+        {
+            // Placeholder for update check logic
+            this.dialogService.ShowMessage("Check for Updates", "This feature is not yet implemented.");
+            await Task.CompletedTask;
+        }
+
+        // private async void OnLogFileChanged(object sender, FileSystemEventArgs e)
+        // {
+        //    if (e.ChangeType == WatcherChangeTypes.Changed)
+        //    {
+        //        await this.firewallService.GetExistingRulesAsync(this.loggingService, default(CancellationToken));
+        //        this.TotalRulesCount = this.firewallService.GetExistingRulesAsync(this.loggingService).Count();
+        //    }
+        // }
     }
 }
