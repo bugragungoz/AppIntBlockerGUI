@@ -49,7 +49,9 @@
             <!-- Process List -->
             <Grid Grid.Column="0">
                 <DataGrid ItemsSource="{Binding Usages}"
-                          SelectedItem="{Binding SelectedProcess}"
+                          SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           Background="#171310" Foreground="#f5f0eb" BorderThickness="0"
                           RowBackground="#2a2623"
@@ -57,22 +59,52 @@
                           Visibility="{Binding NoDevicesFound, Converter={StaticResource InvertedBooleanToVisibilityConverter}}">
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="#2a2623"/>
+                            <Setter Property="Foreground" Value="#f5f0eb"/>
                             <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ColorAnimation Storyboard.TargetProperty="Background.Color" 
+                                                              To="#3a3633" Duration="0:0:0.2"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ColorAnimation Storyboard.TargetProperty="Background.Color" 
+                                                              To="#2a2623" Duration="0:0:0.2"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    <Setter Property="Background" Value="#eebb88"/>
                                     <Setter Property="Foreground" Value="#171310"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ColorAnimation Storyboard.TargetProperty="Background.Color" 
+                                                              To="#eebb88" Duration="0:0:0.3"/>
+                                                <ColorAnimation Storyboard.TargetProperty="Foreground.Color" 
+                                                              To="#171310" Duration="0:0:0.3"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
+                        <DataGridTextColumn Header="PROCESS" Binding="{Binding ProcessName}" Width="2*"/>
                         <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto"/>
-                        <DataGridTextColumn Header="Upload (Mbps)" Binding="{Binding UploadKbps, StringFormat={}{0:F2}}" Width="*"/>
-                        <DataGridTextColumn Header="Download (Mbps)" Binding="{Binding DownloadKbps, StringFormat={}{0:F2}}" Width="*"/>
-                        <DataGridTextColumn Header="Sent (MB)" Binding="{Binding TotalSentMB, StringFormat={}{0:F1}}" Width="*"/>
-                        <DataGridTextColumn Header="Received (MB)" Binding="{Binding TotalReceivedMB, StringFormat={}{0:F1}}" Width="*"/>
+                        <DataGridTextColumn Header="SENT RATE" Binding="{Binding SentRateFormatted}" Width="*"/>
+                        <DataGridTextColumn Header="RECEIVED RATE" Binding="{Binding ReceivedRateFormatted}" Width="*"/>
+                        <DataGridTextColumn Header="SENT" Binding="{Binding TotalSentFormatted}" Width="*"/>
+                        <DataGridTextColumn Header="RECEIVED" Binding="{Binding TotalReceivedFormatted}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
 
@@ -134,23 +166,23 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="5">
-                            <TextBlock Text="Total Upload" Style="{StaticResource StatLabelStyle}"/>
-                            <TextBlock Text="{Binding TotalUploadMbps, StringFormat={}{0:F2} Mbps}" Style="{StaticResource StatValueStyle}"/>
+                            <TextBlock Text="Total Sent Rate" Style="{StaticResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalSentRateFormatted}" Style="{StaticResource StatValueStyle}"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
-                            <TextBlock Text="Total Download" Style="{StaticResource StatLabelStyle}"/>
-                            <TextBlock Text="{Binding TotalDownloadMbps, StringFormat={}{0:F2} Mbps}" Style="{StaticResource StatValueStyle}"/>
+                            <TextBlock Text="Total Received Rate" Style="{StaticResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalReceivedRateFormatted}" Style="{StaticResource StatValueStyle}"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Row="1" Grid.Column="0" Margin="5">
                             <TextBlock Text="Total Sent" Style="{StaticResource StatLabelStyle}"/>
-                            <TextBlock Text="{Binding TotalUploadedMb, StringFormat={}{0:F2} MB}" Style="{StaticResource StatValueStyle}"/>
+                            <TextBlock Text="{Binding TotalSentFormatted}" Style="{StaticResource StatValueStyle}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="1" Grid.Column="1" Margin="5">
                             <TextBlock Text="Total Received" Style="{StaticResource StatLabelStyle}"/>
-                            <TextBlock Text="{Binding TotalDownloadedMb, StringFormat={}{0:F2} MB}" Style="{StaticResource StatValueStyle}"/>
+                            <TextBlock Text="{Binding TotalReceivedFormatted}" Style="{StaticResource StatValueStyle}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
