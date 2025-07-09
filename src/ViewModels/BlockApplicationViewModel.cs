@@ -21,7 +21,7 @@ namespace AppIntBlockerGUI.ViewModels
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
 
-    public partial class BlockApplicationViewModel : ObservableObject, IDisposable
+    public partial class BlockApplicationViewModel : ObservableObject, IDisposable, INotifyNavigated
     {
         private readonly IFirewallService firewallService;
         private readonly ILoggingService loggingService;
@@ -104,16 +104,21 @@ namespace AppIntBlockerGUI.ViewModels
             this.loggingService.LogEntryAdded += this.OnLogEntryAdded;
         }
 
-        public async Task InitializeAsync()
+        public void OnNavigatedTo()
         {
             this.InitializeAsciiArt();
             this.InitializeWelcomeMessage();
 
             // This must be on the UI thread
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 this.InitializeTerminal();
             });
+        }
+
+        public void OnNavigatedFrom()
+        {
+            // No cleanup necessary for this view model
         }
 
         private void InitializeAsciiArt()
