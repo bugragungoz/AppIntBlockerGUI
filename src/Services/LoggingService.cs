@@ -25,6 +25,7 @@ namespace AppIntBlockerGUI.Services
 
             // Configure Serilog
             this.logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
                 .WriteTo.File(
                     Path.Combine(logsDir, "AppIntBlocker.log"),
                     rollingInterval: RollingInterval.Day,
@@ -86,8 +87,9 @@ namespace AppIntBlockerGUI.Services
         public void LogDebug(string message)
         {
             this.logger.Debug(message);
-            // Optional: Decide if debug messages should appear in the UI log
-            // this.Log($"DEBUG: {message}");
+            // Make debug messages visible in UI for troubleshooting
+            var logEntry = $"[{DateTime.Now:HH:mm:ss}] DEBUG: {message}";
+            this.InvokeLogEntryAdded(logEntry);
         }
 
         public void LogCritical(string message, Exception? ex = null)

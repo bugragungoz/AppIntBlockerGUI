@@ -21,6 +21,11 @@ namespace AppIntBlockerGUI.Services
         IReadOnlyList<string> GetAvailableDevices();
 
         /// <summary>
+        /// Gets the default network device (interface with default gateway).
+        /// </summary>
+        string? GetDefaultNetworkDevice();
+
+        /// <summary>
         /// Starts background monitoring on a specific device. Calling multiple times has no effect if monitoring is already active.
         /// </summary>
         /// <param name="deviceName">The friendly name of the device to monitor.</param>
