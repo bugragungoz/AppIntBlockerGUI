@@ -37,35 +37,51 @@ namespace AppIntBlockerGUI
             AppHost = Host.CreateDefaultBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddSingleton<MainWindow>();
-                    services.AddSingleton<IDialogService, DialogService>();
-                    services.AddSingleton<INavigationService, NavigationService>();
-                    services.AddSingleton<ISystemRestoreService, SystemRestoreService>();
-                    services.AddSingleton<IFirewallService, FirewallService>();
-                    services.AddSingleton<SettingsService>();
+                    // Register Services
                     services.AddSingleton<ILoggingService, LoggingService>();
-                    services.AddSingleton<LoggingService>();
+                    services.AddSingleton<IDialogService, DialogService>();
+                    
+                    // Add services that have dependencies
+                    services.AddSingleton<ISettingsService, SettingsService>(provider => 
+                        new SettingsService(
+                            provider.GetRequiredService<ILoggingService>(),
+                            provider.GetRequiredService<IDialogService>()));
+                            
+                    services.AddSingleton<ISystemRestoreService, SystemRestoreService>(provider =>
+                        new SystemRestoreService(
+                            provider.GetRequiredService<ILoggingService>()));
+
+                    services.AddSingleton<INavigationService, NavigationService>();
+                    
+                    // Correctly register the PowerShell wrapper factory
+                    services.AddSingleton<ObjectPool<PowerShell>>(provider =>
+                    {
+                        var poolProvider = new DefaultObjectPoolProvider();
+                        return poolProvider.Create(new PowerShellPooledObjectPolicy());
+                    });
+                    services.AddTransient<Func<IPowerShellWrapper>>(provider => 
+                        () => new PowerShellWrapper(provider.GetRequiredService<ObjectPool<PowerShell>>()));
+                        
+                    services.AddSingleton<IFirewallService, FirewallService>();
                     services.AddSingleton<INetworkMonitorService, NetworkMonitorService>();
 
-                    services.AddSingleton<MainWindowViewModel>();
-                    services.AddSingleton<BlockApplicationViewModel>();
-                    services.AddSingleton<ManageRulesViewModel>();
-                    services.AddSingleton<SettingsViewModel>();
-                    services.AddSingleton<WindowsFirewallViewModel>();
-                    services.AddSingleton<RestorePointsViewModel>();
+                    // Register ViewModels
+                    services.AddTransient<MainWindowViewModel>();
+                    services.AddTransient<BlockApplicationViewModel>();
+                    services.AddTransient<ManageRulesViewModel>();
+                    services.AddTransient<RestorePointsViewModel>();
+                    services.AddTransient<SettingsViewModel>();
+                    services.AddTransient<WindowsFirewallViewModel>();
                     services.AddTransient<NetworkMonitorViewModel>();
 
-                    services.AddSingleton<ObjectPool<PowerShell>>(serviceProvider =>
-                    {
-                        var provider = new DefaultObjectPoolProvider();
-                        return provider.Create(new PowerShellPooledObjectPolicy());
-                    });
-
-                    services.AddTransient<Func<IPowerShellWrapper>>(serviceProvider =>
-                    {
-                        var pool = serviceProvider.GetRequiredService<ObjectPool<PowerShell>>();
-                        return () => new PowerShellWrapper(pool);
-                    });
+                    // Register Views
+                    services.AddTransient<MainWindow>();
+                    services.AddTransient<BlockApplicationView>();
+                    services.AddTransient<ManageRulesView>();
+                    services.AddTransient<RestorePointsView>();
+                    services.AddTransient<SettingsView>();
+                    services.AddTransient<WindowsFirewallView>();
+                    services.AddTransient<NetworkMonitorView>();
                 })
                 .ConfigureLogging(logging =>
                 {

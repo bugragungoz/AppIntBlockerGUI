@@ -37,6 +37,11 @@ namespace AppIntBlockerGUI.Services
 
         public void NavigateTo(Type viewModelType)
         {
+            if (this.CurrentViewModel is INotifyNavigated oldViewModel)
+            {
+                oldViewModel.OnNavigatedFrom();
+            }
+
             var viewModel = this.serviceProvider.GetRequiredService(viewModelType) as ObservableObject;
             if (viewModel == null)
             {
@@ -45,11 +50,9 @@ namespace AppIntBlockerGUI.Services
 
             this.CurrentViewModel = viewModel;
 
-            // Asynchronously initialize the ViewModel if it has an InitializeAsync method
-            var initializeMethod = viewModel.GetType().GetMethod("InitializeAsync");
-            if (initializeMethod != null)
+            if (this.CurrentViewModel is INotifyNavigated newViewModel)
             {
-                _ = initializeMethod.Invoke(viewModel, null);
+                newViewModel.OnNavigatedTo();
             }
         }
     }

@@ -3,69 +3,128 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.Wpf"
+             xmlns:viewmodels="clr-namespace:AppIntBlockerGUI.ViewModels"
+             xmlns:converters="clr-namespace:AppIntBlockerGUI.Converters"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
              mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=viewmodels:NetworkMonitorViewModel}"
              d:DesignHeight="600" d:DesignWidth="900">
+
     <UserControl.Resources>
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#f5f0eb"/>
-        </Style>
+        <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter"/>
         <Style x:Key="HeaderStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#eebb88"/>
             <Setter Property="FontSize" Value="20"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+        <Style TargetType="TextBlock" x:Key="StatLabelStyle">
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="StatValueStyle">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
     </UserControl.Resources>
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Network Monitor" Style="{StaticResource HeaderStyle}"/>
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Left">
-                <TextBlock Text="Total ⬆:" Foreground="#eebb88"/>
-                <TextBlock Text="{Binding TotalUploadKbps, StringFormat={}{0:F0} kbit/s}" Margin="5,0,20,0"/>
-                <TextBlock Text="Total ⬇:" Foreground="#eebb88"/>
-                <TextBlock Text="{Binding TotalDownloadKbps, StringFormat={}{0:F0} kbit/s}" Margin="5,0,20,0"/>
-                <TextBlock Text="Sent:" Foreground="#eebb88"/>
-                <TextBlock Text="{Binding TotalUploadedMb, StringFormat={}{0:F1} MB}" Margin="5,0,20,0"/>
-                <TextBlock Text="Received:" Foreground="#eebb88"/>
-                <TextBlock Text="{Binding TotalDownloadedMb, StringFormat={}{0:F1} MB}" Margin="5,0,0,0"/>
-            </StackPanel>
-        </StackPanel>
+        <TextBlock Grid.Row="0" Text="Network Monitor" Style="{StaticResource HeaderStyle}" Margin="0,0,0,15"/>
 
-        <lvc:CartesianChart Grid.Row="1"
-                            Series="{Binding ChartSeries}"
-                            XAxes="{Binding XAxes}"
-                            YAxes="{Binding YAxes}"
-                            Height="200" 
-                            Margin="0,0,0,10"/>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="1.5*"/>
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="2" Background="#2a2623" BorderBrush="#3c3835" BorderThickness="1" CornerRadius="8" Padding="10">
-            <DataGrid ItemsSource="{Binding Usages}"
+            <!-- Process List -->
+            <DataGrid Grid.Column="0" ItemsSource="{Binding Usages}"
                       SelectedItem="{Binding SelectedProcess}"
                       AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                      Background="#171310" Foreground="#f5f0eb" BorderThickness="0">
+                      Background="#171310" Foreground="#f5f0eb" BorderThickness="0"
+                      RowBackground="#2a2623"
+                      AlternatingRowBackground="#2f2a27">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
-                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="*"/>
+                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto"/>
                     <DataGridTextColumn Header="Upload (kbit/s)" Binding="{Binding UploadKbps, StringFormat={}{0:F1}}" Width="*"/>
                     <DataGridTextColumn Header="Download (kbit/s)" Binding="{Binding DownloadKbps, StringFormat={}{0:F1}}" Width="*"/>
                     <DataGridTextColumn Header="Sent (MB)" Binding="{Binding TotalSentMB, StringFormat={}{0:F1}}" Width="*"/>
                     <DataGridTextColumn Header="Received (MB)" Binding="{Binding TotalReceivedMB, StringFormat={}{0:F1}}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
-        </Border>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,20,0,0">
-            <Button Content="{Binding BlockButtonText}"
-                    Command="{Binding ToggleBlockCommand}"
-                    Style="{StaticResource ModernButtonStyle}"
-                    MinWidth="140" />
-        </StackPanel>
+            <!-- Right Panel: Chart, Stats, Actions -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Network Interface Selector -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                    <TextBlock Text="Network Interface" Foreground="#eebb88" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding NetworkDevices}" 
+                              SelectedItem="{Binding SelectedNetworkDevice, Mode=TwoWay}"
+                              MinWidth="200"/>
+                </StackPanel>
+
+                <!-- Live Chart -->
+                <Grid Grid.Row="1">
+                    <lvc:CartesianChart
+                        Series="{Binding ChartSeries}"
+                        XAxes="{Binding XAxes}"
+                        YAxes="{Binding YAxes}"/>
+                </Grid>
+
+                <!-- Summary Stats -->
+                <Border Grid.Row="2" Background="#2a2623" CornerRadius="8" Padding="15" Margin="0,15,0,15">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="5">
+                            <TextBlock Text="Total Upload" Style="{StaticResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalUploadKbps, StringFormat={}{0:F1} kbit/s}" Style="{StaticResource StatValueStyle}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
+                            <TextBlock Text="Total Download" Style="{StaticResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalDownloadKbps, StringFormat={}{0:F1} kbit/s}" Style="{StaticResource StatValueStyle}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="5">
+                            <TextBlock Text="Total Sent" Style="{StaticResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalUploadedMb, StringFormat={}{0:F2} MB}" Style="{StaticResource StatValueStyle}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="5">
+                            <TextBlock Text="Total Received" Style="{StaticResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalDownloadedMb, StringFormat={}{0:F2} MB}" Style="{StaticResource StatValueStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Actions -->
+                <Button Grid.Row="3" Content="{Binding BlockButtonText}"
+                        Command="{Binding ToggleBlockCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        HorizontalAlignment="Stretch"/>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

@@ -23,11 +23,11 @@ namespace AppIntBlockerGUI.Services
 
         Task<bool> RemoveExistingRules(string applicationName, ILoggingService logger, CancellationToken cancellationToken = default);
 
-        Task<bool> RemoveSingleRule(string ruleName, ILoggingService logger, CancellationToken cancellationToken = default);
+        Task<List<string>> GetExistingRulesAsync(CancellationToken cancellationToken = default);
 
-        Task<List<string>> GetExistingRulesAsync(ILoggingService logger, CancellationToken cancellationToken = default);
+        Task<bool> RemoveSingleRule(string ruleName, CancellationToken cancellationToken = default);
 
-        Task<bool> CreateSystemRestorePoint(string description, ILoggingService logger, CancellationToken cancellationToken = default);
+        Task<bool> CreateSystemRestorePoint(string description, CancellationToken cancellationToken = default);
 
         Task<List<FirewallRuleModel>> GetAllFirewallRulesAsync(CancellationToken cancellationToken = default);
 

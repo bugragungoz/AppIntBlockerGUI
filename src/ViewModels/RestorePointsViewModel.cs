@@ -16,7 +16,7 @@ namespace AppIntBlockerGUI.ViewModels
 
     public partial class RestorePointsViewModel : ObservableObject
     {
-        private readonly SystemRestoreService restoreService;
+        private readonly ISystemRestoreService restoreService;
         private readonly IDialogService dialogService;
         private readonly ILoggingService loggingService;
 
@@ -43,9 +43,9 @@ namespace AppIntBlockerGUI.ViewModels
 
         public RestorePointsViewModel()
         {
-            this.restoreService = new SystemRestoreService();
-            this.dialogService = new DialogService();
             this.loggingService = new LoggingService();
+            this.restoreService = new SystemRestoreService(this.loggingService);
+            this.dialogService = new DialogService();
 
             // Load restore points on initialization
             _ = this.InitializeAsync();

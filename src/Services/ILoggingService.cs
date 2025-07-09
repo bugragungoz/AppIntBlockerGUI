@@ -5,17 +5,24 @@
 namespace AppIntBlockerGUI.Services
 {
     using System;
+    using System.Collections.ObjectModel;
 
     public interface ILoggingService
     {
+        event Action<string> LogEntryAdded;
+
         void LogInfo(string message);
 
         void LogWarning(string message);
 
-        void LogError(string message, Exception? exception = null);
+        void LogError(string message, Exception? ex = null);
 
         void LogDebug(string message);
 
-        event Action<string> LogEntryAdded;
+        void LogCritical(string message, Exception? ex = null);
+
+        ObservableCollection<string> GetLogs();
+
+        void ClearLogs();
     }
 } 
