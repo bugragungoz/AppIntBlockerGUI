@@ -45,6 +45,9 @@ namespace AppIntBlockerGUI.ViewModels
         
         [ObservableProperty]
         private string? selectedNetworkDevice;
+        
+        [ObservableProperty]
+        private bool noDevicesFound;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkMonitorViewModel"/> class.
@@ -137,6 +140,8 @@ namespace AppIntBlockerGUI.ViewModels
                 NetworkDevices.Add(device);
             }
 
+            NoDevicesFound = !NetworkDevices.Any();
+
             if (!monitoringStarted && NetworkDevices.Any())
             {
                 SelectedNetworkDevice = NetworkDevices.First();
@@ -218,8 +223,12 @@ namespace AppIntBlockerGUI.ViewModels
             this.uploadSeriesValues.Clear();
             this.downloadSeriesValues.Clear();
             this.graphStartTime = DateTime.UtcNow;
-            _ = this.UpdateBlockedStatusAsync();
+            
+            // This ensures the button's enabled/disabled state updates immediately
             this.ToggleBlockCommand.NotifyCanExecuteChanged();
+            
+            // Update the blocked status asynchronously
+            _ = this.UpdateBlockedStatusAsync();
         }
 
         private async Task UpdateBlockedStatusAsync()

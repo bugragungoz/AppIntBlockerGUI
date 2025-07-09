@@ -43,10 +43,17 @@ namespace AppIntBlockerGUI.Services
         {
             try
             {
-                return CaptureDeviceList.Instance
+                var devices = CaptureDeviceList.Instance
                     .Where(d => d is LibPcapLiveDevice)
                     .Select(d => d.Description)
                     .ToList();
+                
+                if (!devices.Any())
+                {
+                    loggingService.LogWarning("No network devices found. Ensure Npcap is installed and running.");
+                }
+
+                return devices;
             }
             catch (Exception ex)
             {
