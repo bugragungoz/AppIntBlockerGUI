@@ -132,16 +132,82 @@ namespace AppIntBlockerGUI.ViewModels
         public Axis[] YAxes { get; }
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TotalSentRateFormatted))]
         private double totalUploadMbps;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TotalReceivedRateFormatted))]
         private double totalDownloadMbps;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TotalSentFormatted))]
         private double totalUploadedMb;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TotalReceivedFormatted))]
         private double totalDownloadedMb;
+
+        /// <summary>
+        /// Gets formatted total sent rate with appropriate units.
+        /// </summary>
+        public string TotalSentRateFormatted 
+        {
+            get
+            {
+                var kbps = TotalUploadMbps * 1024; // Convert from Mbps to kbps
+                if (kbps < 1000)
+                    return $"{kbps:F0} kbit/s";
+                else
+                    return $"{TotalUploadMbps:F2} Mbit/s";
+            }
+        }
+
+        /// <summary>
+        /// Gets formatted total received rate with appropriate units.
+        /// </summary>
+        public string TotalReceivedRateFormatted 
+        {
+            get
+            {
+                var kbps = TotalDownloadMbps * 1024; // Convert from Mbps to kbps
+                if (kbps < 1000)
+                    return $"{kbps:F0} kbit/s";
+                else
+                    return $"{TotalDownloadMbps:F2} Mbit/s";
+            }
+        }
+
+        /// <summary>
+        /// Gets formatted total sent data with appropriate units.
+        /// </summary>
+        public string TotalSentFormatted 
+        {
+            get
+            {
+                if (TotalUploadedMb < 1)
+                    return $"{TotalUploadedMb * 1024:F0} KB";
+                else if (TotalUploadedMb < 1024)
+                    return $"{TotalUploadedMb:F1} MB";
+                else
+                    return $"{TotalUploadedMb / 1024:F2} GB";
+            }
+        }
+
+        /// <summary>
+        /// Gets formatted total received data with appropriate units.
+        /// </summary>
+        public string TotalReceivedFormatted 
+        {
+            get
+            {
+                if (TotalDownloadedMb < 1)
+                    return $"{TotalDownloadedMb * 1024:F0} KB";
+                else if (TotalDownloadedMb < 1024)
+                    return $"{TotalDownloadedMb:F1} MB";
+                else
+                    return $"{TotalDownloadedMb / 1024:F2} GB";
+            }
+        }
 
 
 
@@ -281,6 +347,48 @@ namespace AppIntBlockerGUI.ViewModels
             {
                 this.loggingService.LogWarning($"Throughput exceeded {AlertThresholdMbps} Mbps");
             }
+
+            // Trigger UI sorting update every few seconds to keep most active processes at top
+            SortProcessesByActivity();
+        }
+
+        private void SortProcessesByActivity()
+        {
+            try
+            {
+                // Create a sorted list of processes
+                var sortedProcesses = this.networkMonitorService.Usages
+                    .OrderByDescending(p => p.UploadKbps + p.DownloadKbps) // Current activity first
+                    .ThenByDescending(p => p.TotalSentMB + p.TotalReceivedMB) // Total usage second
+                    .ToList();
+
+                // Check if reordering is needed
+                bool needsReorder = false;
+                for (int i = 0; i < Math.Min(sortedProcesses.Count, this.networkMonitorService.Usages.Count); i++)
+                {
+                    if (!ReferenceEquals(sortedProcesses[i], this.networkMonitorService.Usages[i]))
+                    {
+                        needsReorder = true;
+                        break;
+                    }
+                }
+
+                // Only update if order has changed to avoid unnecessary UI updates
+                if (needsReorder)
+                {
+                    var originalUsages = this.networkMonitorService.Usages;
+                    originalUsages.Clear();
+                    foreach (var process in sortedProcesses)
+                    {
+                        originalUsages.Add(process);
+                    }
+                    this.loggingService.LogDebug($"Reordered {sortedProcesses.Count} processes by network activity");
+                }
+            }
+            catch (Exception ex)
+            {
+                this.loggingService.LogError("Error sorting processes by activity", ex);
+            }
         }
 
         partial void OnSelectedProcessChanged(ProcessNetworkUsageModel? value)
@@ -335,6 +443,41 @@ namespace AppIntBlockerGUI.ViewModels
         {
             if (this.SelectedProcess == null || string.IsNullOrEmpty(this.SelectedProcess.Path)) return;
 
+            // System protection check
+            if (!this.IsSelectedProcessBlocked && IsSystemCriticalProcess(this.SelectedProcess))
+            {
+                var processName = this.SelectedProcess.ProcessName;
+                
+                // Critical system processes that should never be blocked
+                if (IsCriticalSystemProcess(processName))
+                {
+                    loggingService.LogWarning($"Attempted to block critical system process: {processName}");
+                    System.Windows.MessageBox.Show(
+                        $"Cannot block '{processName}' as it is a critical system process required for Windows operation.\n\nBlocking this process could cause system instability.",
+                        "System Protection - Critical Process",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+                
+                // Important system processes that require confirmation
+                var result = System.Windows.MessageBox.Show(
+                    $"Warning: '{processName}' appears to be a system process.\n\n" +
+                    $"Blocking this process may affect system functionality or Windows services.\n\n" +
+                    $"Are you sure you want to proceed?",
+                    "System Protection - Confirm Action",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+                
+                if (result != System.Windows.MessageBoxResult.Yes)
+                {
+                    loggingService.LogInfo($"User cancelled blocking system process: {processName}");
+                    return;
+                }
+                
+                loggingService.LogWarning($"User confirmed blocking system process: {processName}");
+            }
+
             this.isBlockOperationRunning = true;
             this.ToggleBlockCommand.NotifyCanExecuteChanged();
 
@@ -346,12 +489,14 @@ namespace AppIntBlockerGUI.ViewModels
                 if (this.IsSelectedProcessBlocked)
                 {
                     await this.firewallService.RemoveExistingRules(appName, this.loggingService);
+                    loggingService.LogInfo($"Unblocked application: {this.SelectedProcess.ProcessName}");
                 }
                 else
                 {
                     await this.firewallService.BlockApplicationFiles(
                         dirPath, true, false, false,
                         new List<string>(), new List<string>(), this.loggingService, CancellationToken.None);
+                    loggingService.LogInfo($"Blocked application: {this.SelectedProcess.ProcessName}");
                 }
             }
             finally
@@ -360,6 +505,41 @@ namespace AppIntBlockerGUI.ViewModels
                 await this.UpdateBlockedStatusAsync();
                 this.ToggleBlockCommand.NotifyCanExecuteChanged();
             }
+        }
+
+        private bool IsSystemCriticalProcess(ProcessNetworkUsageModel process)
+        {
+            var processName = process.ProcessName.ToLower();
+            
+            // Check if it's a system process
+            return processName.Contains("system") ||
+                   processName.Contains("svc") ||
+                   processName.Contains("host") ||
+                   processName.Contains("service") ||
+                   processName.Contains("dwm") ||
+                   processName.Contains("csrss") ||
+                   processName.Contains("wininit") ||
+                   processName.Contains("winlogon") ||
+                   processName.Contains("lsass") ||
+                   processName.Contains("explorer") ||
+                   processName.StartsWith("microsoft") ||
+                   processName.StartsWith("windows") ||
+                   process.Path.ToLower().Contains("windows\\system32") ||
+                   process.Path.ToLower().Contains("windows\\syswow64");
+        }
+
+        private bool IsCriticalSystemProcess(string processName)
+        {
+            var criticalProcesses = new[]
+            {
+                "system", "csrss", "wininit", "winlogon", "lsass", "services",
+                "dwm", "explorer", "conhost", "fontdrvhost", "wmiprvse",
+                "runtimebroker", "sihost", "taskhostw", "ctfmon", "spoolsv",
+                "audiodg", "powershell", "cmd", "mmc", "dllhost"
+            };
+            
+            return criticalProcesses.Any(critical => 
+                processName.ToLower().Contains(critical));
         }
 
         [RelayCommand]
