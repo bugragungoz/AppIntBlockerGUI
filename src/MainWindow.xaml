@@ -61,6 +61,10 @@
             <v:SettingsView />
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type vm:NetworkMonitorViewModel}">
+            <v:NetworkMonitorView />
+        </DataTemplate>
+
         <Style x:Key="MaximizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
             <Setter Property="Content" Value="🗖"/>
             <Setter Property="Command" Value="{Binding Source={x:Static SystemCommands.MaximizeWindowCommand}}"/>
@@ -143,6 +147,10 @@
                     <RadioButton Content="Settings"
                                  Style="{StaticResource NavRadioButtonStyle}"
                                  Command="{Binding NavigateToSettingsCommand}"/>
+
+                    <RadioButton Content="Network Monitor"
+                                 Style="{StaticResource NavRadioButtonStyle}"
+                                 Command="{Binding NavigateToNetworkMonitorCommand}"/>
                 </StackPanel>
                 
                 <!-- System Status -->

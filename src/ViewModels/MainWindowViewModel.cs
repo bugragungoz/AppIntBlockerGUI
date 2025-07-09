@@ -50,6 +50,8 @@ namespace AppIntBlockerGUI.ViewModels
 
         public ICommand NavigateToSettingsCommand { get; }
 
+        public ICommand NavigateToNetworkMonitorCommand { get; }
+
         public MainWindowViewModel(
             INavigationService navigationService,
             IDialogService dialogService,
@@ -66,6 +68,7 @@ namespace AppIntBlockerGUI.ViewModels
             this.NavigateToWindowsFirewallCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(WindowsFirewallViewModel)));
             this.NavigateToRestorePointsCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(RestorePointsViewModel)));
             this.NavigateToSettingsCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(SettingsViewModel)));
+            this.NavigateToNetworkMonitorCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(NetworkMonitorViewModel)));
 
             this.navigationService.NavigationChanged += this.NavigationService_NavigationChanged;
 

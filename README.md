@@ -2,24 +2,25 @@
 
 # AppIntBlockerGUI v1.0
 
-![Block Application View](src/images/blockApplication.png)
+![Block Application View](docs/assets/images/blockApplication.png)
 
 ### Additional Views
 
 | Manage Rules | Restore Points | Windows Firewall | Settings (General) | Settings (Theme) |
 | :---: | :---: | :---: | :---: | :---: |
-| ![Manage Rules View](src/images/manageRules.png) | ![Restore Points View](src/images/restorePoints.png) | ![Windows Firewall View](src/images/windowsFirewall.png) | ![Settings View 1](src/images/settings1.png) | ![Settings View 2](src/images/settings2.png) |
+| ![Manage Rules View](docs/assets/images/manageRules.png) | ![Restore Points View](docs/assets/images/restorePoints.png) | ![Windows Firewall View](docs/assets/images/windowsFirewall.png) | ![Settings View 1](docs/assets/images/settings1.png) | ![Settings View 2](docs/assets/images/settings2.png) |
 
 ### Loading & Dialogs
 
 | Loading Screen | Admin Privileges | Permission Denied | Operation Cancelled |
 | :---: | :---: | :---: | :---: |
-| ![Loading Screen](src/images/loadingScreen.png) | ![Admin Privileges](src/images/adminPrivileges.png) | ![Permission Denied](src/images/permissionDenied.png) | ![Operation Cancelled](src/images/operationCancelled.png) |
+| ![Loading Screen](docs/assets/images/loadingScreen.png) | ![Admin Privileges](docs/assets/images/adminPrivileges.png) | ![Permission Denied](docs/assets/images/permissionDenied.png) | ![Operation Cancelled](docs/assets/images/operationCancelled.png) |
 
 
 **Professional Windows Application Firewall Manager with Modern UI**
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
+[![Git](https://img.shields.io/badge/Git-Download-orange.svg?logo=git&logoColor=white)](https://git-scm.com/downloads)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 
@@ -34,6 +35,8 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 ### Core Functionality
 - **Application Blocking**: Easily block applications from network access
 - **Rule Management**: Create, edit, and delete firewall rules with advanced options
+- **Network Monitor**: Real-time dashboard showing per-process bandwidth usage with a live graph.
+- **One-Click Blocking**: Instantly block or unblock any process from the network monitor.
 - **Restore Points**: Create and restore firewall configuration snapshots
 - **Windows Firewall Integration**: Direct integration with Windows Firewall API
 - **Real-time Monitoring**: Live status updates and rule validation
@@ -51,10 +54,26 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 
 ### Prerequisites
 - Windows 10/11
-- .NET 8.0 Runtime
+- .NET 8.0 SDK or Runtime
+- Git (command-line tool)
 - Administrator privileges (the application will request them automatically)
 
 ### Installation
+
+**0. Install Git & .NET 8 SDK (if you don't have them)**
+
+*Install both quickly using Windows Package Manager (winget):*
+
+```powershell
+winget install --id Git.Git -e --source winget && winget install --id Microsoft.DotNet.SDK.8 -e --source winget
+```
+
+*Or install manually:*
+
+- Git: https://git-scm.com/downloads  
+- .NET 8 SDK: https://dotnet.microsoft.com/download
+
+<br/>
 
 **1. Open a Terminal**
 
@@ -87,13 +106,12 @@ dotnet run
 ```
 AppIntBlockerGUI/
 ├── src/
-│   └── AppIntBlockerGUI/          # Main WPF application
-│       ├── ViewModels/            # MVVM ViewModels
-│       ├── Views/                 # WPF Views and UserControls
-│       ├── Services/              # Business logic and services
-│       ├── Models/                # Data models
-│       ├── Converters/            # Value converters
-│       └── Resources/             # Themes and resources
+│   ├── ViewModels/                # MVVM ViewModels
+│   ├── Views/                     # WPF Views and UserControls
+│   ├── Services/                  # Business logic and services
+│   ├── Models/                    # Data models
+│   ├── Converters/                # Value converters
+│   └── Resources/                 # Themes and resources
 ├── docs/                          # Documentation
 │   ├── api.md
 │   ├── bug_fixes_applied.md
@@ -125,11 +143,12 @@ Logs are automatically created in the `Logs/` directory. Configure logging level
 - **Framework**: WPF (.NET 8.0)
 - **UI Library**: MahApps.Metro with Extended.Wpf.Toolkit
 - **Icons**: MahApps.Metro.IconPacks
-- **Charts**: ScottPlot.WPF
+- **Charts**: LiveChartsCore.SkiaSharpView.WPF
 - **DI Container**: Microsoft.Extensions.DependencyInjection
 
 ### Key Services
 - `IFirewallService`: Windows Firewall API integration
+- `INetworkMonitorService`: Real-time network usage monitoring.
 - `INavigationService`: MVVM navigation management
 - `IThemeService`: Dynamic theme switching
 - `ILoggingService`: Application logging
@@ -139,7 +158,7 @@ Logs are automatically created in the `Logs/` directory. Configure logging level
 ```bash
 # Clone repository
 git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
-cd AppIntBlockerGUI/src/AppIntBlockerGUI
+cd AppIntBlockerGUI/src
 
 # Restore dependencies
 dotnet restore
@@ -176,16 +195,36 @@ This project was developed with the assistance of advanced AI models:
 
 The use of AI tools enabled rapid prototyping, adherence to modern development patterns, and comprehensive documentation while maintaining high code quality standards.
 
-## Security & Bug Fixes (2025)
+## Security & Bug Fixes (initial update and analysis)
 
-In 2025, critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `SECURITY_ANALYSIS.md` and `BUG_FIXES_APPLIED.md`.
+Critical security vulnerabilities and major bugs were addressed with the help of AI-assisted code review and patching. For full details, please see `docs/SECURITY_ANALYSIS.md` and `docs/bug_fixes_applied.md`.
 
 - Command-line (netsh) and PowerShell injection vulnerabilities fixed
 - Path traversal and input validation significantly improved
 - Error message sanitization to prevent sensitive data leaks
 - Settings file is now encrypted (DPAPI)
 
-> These security patches and fixes were proposed and implemented with the assistance of AI tools.
+
+## v1.1.0 Release Notes (2025-07-04)
+
+- **Cancellation Support:** Long-running operations such as refreshing firewall rules can now be cancelled by the user.
+- **Unit Test Suite:** A robust test suite for `FirewallService` has been added, using MSTest and Moq for enhanced reliability.
+- **CI/CD Pipeline:** A GitHub Actions workflow now automatically builds and tests the project on every push and pull request.
+- **Architectural Refactor:** `FirewallService` now depends on an `IPowerShellWrapper` interface, decoupling it from `System.Management.Automation.PowerShell` and significantly improving flexibility and testability.
+- **UI Improvements:** The loading indicator in the "Manage Rules" view now shows dynamic status text (e.g., "Refreshing rules...").
+- **Bug Fixes:** Improved UI feedback during long-running background tasks.
+
+> For the full list of technical changes, see [CHANGELOG.md](CHANGELOG.md).
+
+## v1.2.0 Release Notes (2024-07-08)
+
+- **Network Monitor Dashboard:** New page that displays real-time per-process upload/download speeds with a 60-second live graph.
+- **Internet Block/Unblock:** One-click toggle to add or remove firewall rules for the selected process.
+- **LiveCharts2 Integration:** Replaced ScottPlot with LiveCharts Core (SkiaSharp) for smoother, animated graphs.
+- **Aggregate Stats Panel:** Header shows total bandwidth usage and cumulative MB sent/received during the session.
+- **Throughput Alerts:** Application logs a warning when total throughput exceeds a configurable threshold.
+
+> See the full technical list in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
