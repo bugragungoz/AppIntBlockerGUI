@@ -35,8 +35,13 @@ Developed with the assistance of advanced AI models including Claude 4 Sonnet an
 ### Core Functionality
 - **Application Blocking**: Easily block applications from network access
 - **Rule Management**: Create, edit, and delete firewall rules with advanced options
-- **Network Monitor**: Real-time dashboard showing per-process bandwidth usage with a live graph.
-- **One-Click Blocking**: Instantly block or unblock any process from the network monitor.
+- **Enhanced Network Monitor**: Real-time dashboard with intelligent process analysis and service detection
+  - **Smart Service Detection**: Identifies 100+ network services (HTTP, HTTPS, SSH, FTP, etc.)
+  - **Traffic Intelligence**: Analyzes incoming/outgoing traffic patterns with direction indicators
+  - **Protocol Analysis**: Advanced TCP/UDP/ICMP connection classification
+  - **Security Insights**: Identifies security-sensitive and system processes
+  - **Connection Analytics**: Real-time connection counting and remote destination tracking
+- **One-Click Blocking**: Instantly block or unblock any process from the network monitor
 - **Restore Points**: Create and restore firewall configuration snapshots
 - **Windows Firewall Integration**: Direct integration with Windows Firewall API
 - **Real-time Monitoring**: Live status updates and rule validation
@@ -184,6 +189,19 @@ This project was developed with the assistance of advanced AI models:
 - **Gemini 2.5 Pro**: UI/UX patterns, documentation, and optimization strategies
 
 The use of AI tools enabled rapid prototyping, adherence to modern development patterns, and comprehensive documentation while maintaining high code quality standards.
+
+## Network Intelligence Attribution
+
+The enhanced network monitoring capabilities were inspired by and built upon the excellent open-source project:
+
+**[Sniffnet](https://github.com/GyulyVGC/sniffnet)** by Giuliano Bellini  
+Licensed under MIT OR Apache-2.0
+
+- **Service Detection Database**: Network service identification algorithms adapted from Sniffnet's comprehensive service database
+- **Traffic Classification Logic**: Protocol analysis and traffic direction detection inspired by Sniffnet's networking intelligence
+- **Network Analysis Patterns**: Connection type classification and security assessment methodologies
+
+We extend our gratitude to the Sniffnet project for providing an excellent foundation for network analysis concepts. Their work significantly enhanced our ability to provide intelligent network monitoring capabilities.
 
 ## Security & Bug Fixes (initial update and analysis)
 

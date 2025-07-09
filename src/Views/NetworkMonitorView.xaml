@@ -46,8 +46,16 @@
                 <ColumnDefinition Width="1.5*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Process List -->
+            <!-- Split Process Section: List + Graph -->
             <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1.8*"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Process List (Upper Section) -->
+                <Grid Grid.Row="0">
                 <DataGrid ItemsSource="{Binding Usages}"
                           SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
                           SelectionMode="Single"
@@ -99,12 +107,109 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="PROCESS" Binding="{Binding ProcessName}" Width="2*"/>
-                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto"/>
-                        <DataGridTextColumn Header="SENT RATE" Binding="{Binding SentRateFormatted}" Width="*"/>
-                        <DataGridTextColumn Header="RECEIVED RATE" Binding="{Binding ReceivedRateFormatted}" Width="*"/>
-                        <DataGridTextColumn Header="SENT" Binding="{Binding TotalSentFormatted}" Width="*"/>
-                        <DataGridTextColumn Header="RECEIVED" Binding="{Binding TotalReceivedFormatted}" Width="*"/>
+                        <!-- Process Name - White/Default -->
+                        <DataGridTextColumn Header="PROCESS" Binding="{Binding ProcessName}" Width="1.2*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#f5f0eb"/>
+                                    <Setter Property="FontWeight" Value="Medium"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Service - Blue -->
+                        <DataGridTextColumn Header="SERVICE" Binding="{Binding ServiceName}" Width="1*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#88aaff"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Traffic Direction - Orange -->
+                        <DataGridTextColumn Header="TRAFFIC" Binding="{Binding TrafficDirectionSummary}" Width="0.8*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#ffaa66"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Connections - Green -->
+                        <DataGridTextColumn Header="CONNECTIONS" Binding="{Binding ConnectionSummary}" Width="0.8*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#66ff88"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- PID - Cyan -->
+                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#66ddff"/>
+                                    <Setter Property="FontSize" Value="10"/>
+                                    <Setter Property="FontFamily" Value="Consolas"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Sent Rate - Light Red -->
+                        <DataGridTextColumn Header="SENT RATE" Binding="{Binding SentRateFormatted}" Width="0.8*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#ff8899"/>
+                                    <Setter Property="FontWeight" Value="Medium"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Received Rate - Light Green -->
+                        <DataGridTextColumn Header="RECEIVED RATE" Binding="{Binding ReceivedRateFormatted}" Width="0.8*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#88ff99"/>
+                                    <Setter Property="FontWeight" Value="Medium"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Total Sent - Pink -->
+                        <DataGridTextColumn Header="SENT" Binding="{Binding TotalSentFormatted}" Width="0.7*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#ff99bb"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Total Received - Light Blue -->
+                        <DataGridTextColumn Header="RECEIVED" Binding="{Binding TotalReceivedFormatted}" Width="0.7*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#99bbff"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- Status - Yellow -->
+                        <DataGridTextColumn Header="STATUS" Binding="{Binding SecurityStatus}" Width="1*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#ffdd44"/>
+                                    <Setter Property="FontSize" Value="10"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
 
@@ -124,6 +229,39 @@
                         </TextBlock>
                     </StackPanel>
                 </Border>
+                </Grid>
+
+                <!-- Splitter -->
+                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                             Background="#3a3633" ResizeBehavior="PreviousAndNext"/>
+
+                <!-- Process Overview Graph (Lower Section) -->
+                <Grid Grid.Row="2" Margin="0,5,0,0">
+                    <Border Background="#171310" CornerRadius="8" BorderBrush="#3a3633" BorderThickness="1">
+                        <Grid Margin="15">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Graph Title -->
+                            <TextBlock Grid.Row="0" Text="🌐 Real-Time Process Network Activity" 
+                                      Style="{StaticResource HeaderStyle}" 
+                                      FontSize="14" Margin="0,0,0,10" 
+                                      Foreground="#eebb88"/>
+
+                            <!-- Process Activity Chart -->
+                            <Grid Grid.Row="1">
+                                <lvc:CartesianChart
+                                    Series="{Binding ProcessChartSeries}"
+                                    XAxes="{Binding ProcessXAxes}"
+                                    YAxes="{Binding ProcessYAxes}"
+                                    AnimationsSpeed="0:0:0.5"
+                                    EasingFunction="{x:Static lvcore:EasingFunctions.CubicOut}"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
 
             <!-- Right Panel: Chart, Stats, Actions -->

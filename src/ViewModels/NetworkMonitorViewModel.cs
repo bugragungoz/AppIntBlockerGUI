@@ -32,6 +32,9 @@ namespace AppIntBlockerGUI.ViewModels
         private bool isBlockOperationRunning;
         private readonly ObservableCollection<ObservablePoint> uploadSeriesValues = new();
         private readonly ObservableCollection<ObservablePoint> downloadSeriesValues = new();
+        private readonly ObservableCollection<ObservablePoint> processChartTotalValues = new();
+        private readonly ObservableCollection<ObservablePoint> processChartSystemValues = new();
+        private readonly ObservableCollection<ObservablePoint> processChartUserValues = new();
         private DateTime graphStartTime = DateTime.UtcNow;
         private readonly DispatcherTimer graphTimer;
 
@@ -93,6 +96,41 @@ namespace AppIntBlockerGUI.ViewModels
             this.XAxes = new Axis[] { new Axis { Labeler = value => $"{value:0}s", Name = "Time (s)" } };
             this.YAxes = new Axis[] { new Axis { Name = "kbit/s" } };
 
+            // Initialize Process Overview Chart
+            this.ProcessChartSeries = new ISeries[]
+            {
+                new LineSeries<ObservablePoint>
+                {
+                    Name = "Total Network Activity",
+                    Values = this.processChartTotalValues,
+                    Stroke = new SolidColorPaint(SKColors.LimeGreen, 3),
+                    Fill = new LinearGradientPaint(SKColors.LimeGreen.WithAlpha(120), SKColors.LimeGreen.WithAlpha(20), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
+                    GeometrySize = 4,
+                    LineSmoothness = 0.8
+                },
+                new LineSeries<ObservablePoint>
+                {
+                    Name = "System Processes",
+                    Values = this.processChartSystemValues,
+                    Stroke = new SolidColorPaint(SKColors.Orange, 2),
+                    Fill = new LinearGradientPaint(SKColors.Orange.WithAlpha(80), SKColors.Orange.WithAlpha(15), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
+                    GeometrySize = 3,
+                    LineSmoothness = 0.6
+                },
+                new LineSeries<ObservablePoint>
+                {
+                    Name = "User Processes",
+                    Values = this.processChartUserValues,
+                    Stroke = new SolidColorPaint(SKColors.DeepSkyBlue, 2),
+                    Fill = new LinearGradientPaint(SKColors.DeepSkyBlue.WithAlpha(80), SKColors.DeepSkyBlue.WithAlpha(15), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
+                    GeometrySize = 3,
+                    LineSmoothness = 0.6
+                }
+            };
+
+            this.ProcessXAxes = new Axis[] { new Axis { Labeler = value => $"{value:0}s", Name = "Time" } };
+            this.ProcessYAxes = new Axis[] { new Axis { Name = "Activity (kbit/s)" } };
+
             NetworkDevices = new ObservableCollection<string>(this.networkMonitorService.GetAvailableDevices());
             if (NetworkDevices.Any())
             {
@@ -131,6 +169,11 @@ namespace AppIntBlockerGUI.ViewModels
         public Axis[] XAxes { get; }
         public Axis[] YAxes { get; }
 
+        // Process Overview Chart Properties
+        public ISeries[] ProcessChartSeries { get; }
+        public Axis[] ProcessXAxes { get; }
+        public Axis[] ProcessYAxes { get; }
+
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(TotalSentRateFormatted))]
         private double totalUploadMbps;
@@ -148,32 +191,28 @@ namespace AppIntBlockerGUI.ViewModels
         private double totalDownloadedMb;
 
         /// <summary>
-        /// Gets formatted total sent rate with appropriate units.
+        /// Gets formatted total sent rate in MB/s (Megabytes per second).
         /// </summary>
         public string TotalSentRateFormatted 
         {
             get
             {
-                var kbps = TotalUploadMbps * 1024; // Convert from Mbps to kbps
-                if (kbps < 1000)
-                    return $"{kbps:F0} kbit/s";
-                else
-                    return $"{TotalUploadMbps:F2} Mbit/s";
+                // Convert from kbps to MB/s: kbps -> bps -> MB/s
+                var mbps = (TotalUploadMbps * 1024) / (8 * 1024 * 1024); // kbps to MB/s
+                return $"{mbps:F2} MB/s";
             }
         }
 
         /// <summary>
-        /// Gets formatted total received rate with appropriate units.
+        /// Gets formatted total received rate in MB/s (Megabytes per second).
         /// </summary>
         public string TotalReceivedRateFormatted 
         {
             get
             {
-                var kbps = TotalDownloadMbps * 1024; // Convert from Mbps to kbps
-                if (kbps < 1000)
-                    return $"{kbps:F0} kbit/s";
-                else
-                    return $"{TotalDownloadMbps:F2} Mbit/s";
+                // Convert from kbps to MB/s: kbps -> bps -> MB/s  
+                var mbps = (TotalDownloadMbps * 1024) / (8 * 1024 * 1024); // kbps to MB/s
+                return $"{mbps:F2} MB/s";
             }
         }
 
@@ -348,47 +387,50 @@ namespace AppIntBlockerGUI.ViewModels
                 this.loggingService.LogWarning($"Throughput exceeded {AlertThresholdMbps} Mbps");
             }
 
-            // Trigger UI sorting update every few seconds to keep most active processes at top
-            SortProcessesByActivity();
+            // Note: Sorting is now handled automatically by NetworkMonitorService
+            // to prevent DataGrid selection issues
+
+            // Update Process Overview Chart
+            UpdateProcessChart(elapsed);
         }
 
-        private void SortProcessesByActivity()
+        private void UpdateProcessChart(double elapsed)
         {
             try
             {
-                // Create a sorted list of processes
-                var sortedProcesses = this.networkMonitorService.Usages
-                    .OrderByDescending(p => p.UploadKbps + p.DownloadKbps) // Current activity first
-                    .ThenByDescending(p => p.TotalSentMB + p.TotalReceivedMB) // Total usage second
-                    .ToList();
+                // Calculate total, system, and user process activity
+                var usages = this.networkMonitorService.Usages;
+                if (!usages.Any()) return;
 
-                // Check if reordering is needed
-                bool needsReorder = false;
-                for (int i = 0; i < Math.Min(sortedProcesses.Count, this.networkMonitorService.Usages.Count); i++)
-                {
-                    if (!ReferenceEquals(sortedProcesses[i], this.networkMonitorService.Usages[i]))
-                    {
-                        needsReorder = true;
-                        break;
-                    }
-                }
+                double totalActivity = usages.Sum(u => u.UploadKbps + u.DownloadKbps);
+                double systemActivity = usages.Where(u => u.IsSystemProcess || u.SecurityStatus.Contains("System")).Sum(u => u.UploadKbps + u.DownloadKbps);
+                double userActivity = totalActivity - systemActivity;
 
-                // Only update if order has changed to avoid unnecessary UI updates
-                if (needsReorder)
+                // Add new data points to collections
+                this.processChartTotalValues.Add(new ObservablePoint(elapsed, totalActivity));
+                this.processChartSystemValues.Add(new ObservablePoint(elapsed, systemActivity));
+                this.processChartUserValues.Add(new ObservablePoint(elapsed, userActivity));
+
+                // Keep only last 60 seconds of data
+                if (this.processChartTotalValues.Count > 60)
                 {
-                    var originalUsages = this.networkMonitorService.Usages;
-                    originalUsages.Clear();
-                    foreach (var process in sortedProcesses)
-                    {
-                        originalUsages.Add(process);
-                    }
-                    this.loggingService.LogDebug($"Reordered {sortedProcesses.Count} processes by network activity");
+                    this.processChartTotalValues.RemoveAt(0);
+                    this.processChartSystemValues.RemoveAt(0);
+                    this.processChartUserValues.RemoveAt(0);
                 }
             }
             catch (Exception ex)
             {
-                this.loggingService.LogError("Error sorting processes by activity", ex);
+                this.loggingService.LogDebug($"Error updating process chart: {ex.Message}");
             }
+        }
+
+        private void SortProcessesByActivity()
+        {
+            // DISABLED: This method was causing selection issues by clearing the collection
+            // The NetworkMonitorService now handles sorting internally
+            // This prevents UI refresh from breaking DataGrid selection
+            return;
         }
 
         partial void OnSelectedProcessChanged(ProcessNetworkUsageModel? value)
