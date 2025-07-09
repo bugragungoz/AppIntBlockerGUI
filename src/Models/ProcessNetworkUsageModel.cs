@@ -19,6 +19,9 @@ namespace AppIntBlockerGUI.Models
 
         public long TotalSentBytes;
         public long TotalReceivedBytes;
+        public long PreviousTotalSentBytes;
+        public long PreviousTotalReceivedBytes;
+        public DateTime PreviousSampleTime;
 
         [ObservableProperty]
         private double uploadKbps;

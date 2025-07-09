@@ -25,7 +25,7 @@ namespace AppIntBlockerGUI.Services
         /// </summary>
         /// <param name="deviceName">The friendly name of the device to monitor.</param>
         /// <param name="intervalMilliseconds">Sampling interval in milliseconds.</param>
-        void StartMonitoring(string deviceName, int intervalMilliseconds = 1000);
+        Task StartMonitoringAsync(string deviceName, int intervalMilliseconds = 1000);
 
         /// <summary>
         /// Stops the background monitoring thread and releases all unmanaged resources.

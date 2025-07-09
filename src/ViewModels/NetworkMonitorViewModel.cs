@@ -48,6 +48,9 @@ namespace AppIntBlockerGUI.ViewModels
         
         [ObservableProperty]
         private bool noDevicesFound;
+        
+        [ObservableProperty]
+        private bool isChangingDevice;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkMonitorViewModel"/> class.
@@ -145,9 +148,7 @@ namespace AppIntBlockerGUI.ViewModels
             if (!monitoringStarted && NetworkDevices.Any())
             {
                 SelectedNetworkDevice = NetworkDevices.First();
-                networkMonitorService.StartMonitoring(SelectedNetworkDevice);
-                monitoringStarted = true;
-                graphTimer.Start();
+                // Note: The OnSelectedNetworkDeviceChanged handler will trigger the initial monitoring.
             }
         }
 
@@ -163,15 +164,28 @@ namespace AppIntBlockerGUI.ViewModels
         
         partial void OnSelectedNetworkDeviceChanged(string? value)
         {
-            if (value != null)
+            if (value != null && !IsChangingDevice)
             {
-                loggingService.LogInfo($"Device selection changed. Monitoring '{value}'.");
-                networkMonitorService.StartMonitoring(value);
+                _ = ChangeDeviceAsync(value);
+            }
+        }
+
+        private async Task ChangeDeviceAsync(string deviceName)
+        {
+            IsChangingDevice = true;
+            try
+            {
+                loggingService.LogInfo($"Device selection changed. Monitoring '{deviceName}'.");
+                await networkMonitorService.StartMonitoringAsync(deviceName);
                 monitoringStarted = true;
                 if (!graphTimer.IsEnabled)
                 {
                     graphTimer.Start();
                 }
+            }
+            finally
+            {
+                IsChangingDevice = false;
             }
         }
         

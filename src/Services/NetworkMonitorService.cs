@@ -29,7 +29,6 @@ namespace AppIntBlockerGUI.Services
         private System.Timers.Timer? pidMappingTimer;
         private long totalBytesSent = 0;
         private long totalBytesReceived = 0;
-        private DateTime lastSampleTime;
 
         public NetworkMonitorService(ILoggingService loggingService)
         {
@@ -46,6 +45,7 @@ namespace AppIntBlockerGUI.Services
                 var devices = CaptureDeviceList.Instance
                     .Where(d => d is LibPcapLiveDevice)
                     .Select(d => d.Description)
+                    .Distinct()
                     .ToList();
                 
                 if (!devices.Any())
@@ -62,7 +62,7 @@ namespace AppIntBlockerGUI.Services
             }
         }
 
-        public void StartMonitoring(string deviceName, int intervalMilliseconds = 1000)
+        public async Task StartMonitoringAsync(string deviceName, int intervalMilliseconds = 1000)
         {
             if (monitoringTask != null && !monitoringTask.IsCompleted)
             {
@@ -73,7 +73,7 @@ namespace AppIntBlockerGUI.Services
                 }
                 
                 // If a different device is selected, stop the current monitoring first.
-                StopMonitoringAsync().Wait();
+                await StopMonitoringAsync();
             }
 
             selectedDeviceName = deviceName;
@@ -112,7 +112,6 @@ namespace AppIntBlockerGUI.Services
                 loggingService.LogInfo($"Started capturing on: {captureDevice.Description}");
                 
                 UpdateConnectionToPidMap();
-                lastSampleTime = DateTime.UtcNow;
 
                 captureDevice.StartCapture();
 
@@ -192,27 +191,39 @@ namespace AppIntBlockerGUI.Services
         private void UpdateUi(object? sender, System.Timers.ElapsedEventArgs e)
         {
             var now = DateTime.UtcNow;
-            var timeDiff = (now - lastSampleTime).TotalSeconds;
-            if (timeDiff < 0.1) return;
-
-            var currentSent = Interlocked.Read(ref totalBytesSent);
-            var currentReceived = Interlocked.Read(ref totalBytesReceived);
-            
-            // This is a simplified total, not per process.
-            // For per-process bandwidth, we would need to store previous byte counts.
-
-            lastSampleTime = now;
-
+ 
             foreach (var usage in usageLookup.Values)
             {
-                 if (usage != null)
-                 {
-                    // This calculation is complex to do accurately in real-time without more state.
-                    // For now, let's keep it simple and just update totals.
+                if (usage != null)
+                {
+                    if (usage.PreviousSampleTime == default)
+                    {
+                        // First time seeing this process, just set initial values.
+                        usage.PreviousSampleTime = now;
+                        usage.PreviousTotalSentBytes = usage.TotalSentBytes;
+                        usage.PreviousTotalReceivedBytes = usage.TotalReceivedBytes;
+                        continue;
+                    }
+ 
+                    var timeDiffSeconds = (now - usage.PreviousSampleTime).TotalSeconds;
+ 
+                    if (timeDiffSeconds > 0.1)
+                    {
+                        var sentBytes = usage.TotalSentBytes - usage.PreviousTotalSentBytes;
+                        var receivedBytes = usage.TotalReceivedBytes - usage.PreviousTotalReceivedBytes;
+ 
+                        usage.UploadKbps = (sentBytes * 8) / (timeDiffSeconds * 1024);
+                        usage.DownloadKbps = (receivedBytes * 8) / (timeDiffSeconds * 1024);
+ 
+                        usage.PreviousTotalSentBytes = usage.TotalSentBytes;
+                        usage.PreviousTotalReceivedBytes = usage.TotalReceivedBytes;
+                        usage.PreviousSampleTime = now;
+                    }
+                    
                     usage.LastUpdatedUtc = now;
-                 }
+                }
             }
-
+ 
             SyncObservableCollection();
         }
 
