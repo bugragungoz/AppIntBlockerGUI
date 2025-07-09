@@ -63,6 +63,9 @@ namespace AppIntBlockerGUI.ViewModels
             this.loggingService = loggingService;
             this.firewallService = firewallService;
 
+            // Test logging system
+            this.loggingService.LogInfo("MainWindowViewModel constructor called - application starting");
+
             this.NavigateToBlockApplicationCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(BlockApplicationViewModel)));
             this.NavigateToManageRulesCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(ManageRulesViewModel)));
             this.NavigateToWindowsFirewallCommand = new RelayCommand(() => this.navigationService.NavigateTo(typeof(WindowsFirewallViewModel)));

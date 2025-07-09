@@ -12,25 +12,23 @@
              d:DesignHeight="600" d:DesignWidth="900">
 
     <UserControl.Resources>
-        <ResourceDictionary>
-            <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter"/>
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
-            <Style x:Key="HeaderStyle" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="#eebb88"/>
-                <Setter Property="FontSize" Value="20"/>
-                <Setter Property="FontWeight" Value="Bold"/>
-            </Style>
-            <Style TargetType="TextBlock" x:Key="StatLabelStyle">
-                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
-                <Setter Property="FontSize" Value="12"/>
-            </Style>
-            <Style TargetType="TextBlock" x:Key="StatValueStyle">
-                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="FontSize" Value="16"/>
-            </Style>
-        </ResourceDictionary>
+        <Style x:Key="HeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#eebb88"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="StatLabelStyle">
+            <Setter Property="Foreground" Value="#888888"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="StatValueStyle">
+            <Setter Property="Foreground" Value="#f5f0eb"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -71,8 +69,8 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
                         <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto"/>
-                        <DataGridTextColumn Header="Upload (kbit/s)" Binding="{Binding UploadKbps, StringFormat={}{0:F1}}" Width="*"/>
-                        <DataGridTextColumn Header="Download (kbit/s)" Binding="{Binding DownloadKbps, StringFormat={}{0:F1}}" Width="*"/>
+                        <DataGridTextColumn Header="Upload (Mbps)" Binding="{Binding UploadKbps, StringFormat={}{0:F2}}" Width="*"/>
+                        <DataGridTextColumn Header="Download (Mbps)" Binding="{Binding DownloadKbps, StringFormat={}{0:F2}}" Width="*"/>
                         <DataGridTextColumn Header="Sent (MB)" Binding="{Binding TotalSentMB, StringFormat={}{0:F1}}" Width="*"/>
                         <DataGridTextColumn Header="Received (MB)" Binding="{Binding TotalReceivedMB, StringFormat={}{0:F1}}" Width="*"/>
                     </DataGrid.Columns>
@@ -105,12 +103,12 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Network Interface Selector -->
+                <!-- Network Status -->
                 <StackPanel Grid.Row="0" Margin="0,0,0,15">
-                    <TextBlock Text="Network Interface" Foreground="#eebb88" Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding NetworkDevices}" 
-                              SelectedItem="{Binding SelectedNetworkDevice, Mode=TwoWay}"
-                              MinWidth="200"/>
+                    <TextBlock Text="Active Network Interface" Foreground="#eebb88" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding SelectedNetworkDevice}" 
+                               Foreground="#f5f0eb" 
+                               FontSize="12"/>
                 </StackPanel>
 
                 <!-- Live Chart -->
@@ -137,12 +135,12 @@
                         
                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="5">
                             <TextBlock Text="Total Upload" Style="{StaticResource StatLabelStyle}"/>
-                            <TextBlock Text="{Binding TotalUploadKbps, StringFormat={}{0:F1} kbit/s}" Style="{StaticResource StatValueStyle}"/>
+                            <TextBlock Text="{Binding TotalUploadMbps, StringFormat={}{0:F2} Mbps}" Style="{StaticResource StatValueStyle}"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
                             <TextBlock Text="Total Download" Style="{StaticResource StatLabelStyle}"/>
-                            <TextBlock Text="{Binding TotalDownloadKbps, StringFormat={}{0:F1} kbit/s}" Style="{StaticResource StatValueStyle}"/>
+                            <TextBlock Text="{Binding TotalDownloadMbps, StringFormat={}{0:F2} Mbps}" Style="{StaticResource StatValueStyle}"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Row="1" Grid.Column="0" Margin="5">

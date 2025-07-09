@@ -72,7 +72,7 @@ namespace AppIntBlockerGUI
                     services.AddTransient<RestorePointsViewModel>();
                     services.AddTransient<SettingsViewModel>();
                     services.AddTransient<WindowsFirewallViewModel>();
-                    services.AddTransient<NetworkMonitorViewModel>();
+                    services.AddSingleton<NetworkMonitorViewModel>();
 
                     // Register Views
                     services.AddTransient<MainWindow>();

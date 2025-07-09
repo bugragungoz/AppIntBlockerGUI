@@ -96,7 +96,18 @@ namespace AppIntBlockerGUI.ViewModels
             NetworkDevices = new ObservableCollection<string>(this.networkMonitorService.GetAvailableDevices());
             if (NetworkDevices.Any())
             {
-                SelectedNetworkDevice = NetworkDevices.First();
+                // Try to select the default network device first
+                var defaultDevice = this.networkMonitorService.GetDefaultNetworkDevice();
+                if (defaultDevice != null && NetworkDevices.Contains(defaultDevice))
+                {
+                    SelectedNetworkDevice = defaultDevice;
+                    loggingService.LogInfo($"Auto-selected default network device: {defaultDevice}");
+                }
+                else
+                {
+                    SelectedNetworkDevice = NetworkDevices.First();
+                    loggingService.LogInfo($"Auto-selected first available network device: {NetworkDevices.First()}");
+                }
             }
         }
 
@@ -121,10 +132,10 @@ namespace AppIntBlockerGUI.ViewModels
         public Axis[] YAxes { get; }
 
         [ObservableProperty]
-        private double totalUploadKbps;
+        private double totalUploadMbps;
 
         [ObservableProperty]
-        private double totalDownloadKbps;
+        private double totalDownloadMbps;
 
         [ObservableProperty]
         private double totalUploadedMb;
@@ -132,10 +143,18 @@ namespace AppIntBlockerGUI.ViewModels
         [ObservableProperty]
         private double totalDownloadedMb;
 
-        private const double AlertThresholdKbps = 5000; // 5 Mbps
+
 
         public void OnNavigatedTo()
         {
+            loggingService.LogInfo("NetworkMonitorViewModel.OnNavigatedTo() called - starting network monitoring setup");
+
+            if (monitoringStarted)
+            {
+                graphTimer.Start();
+                return;
+            }
+
             NetworkDevices.Clear();
             var devices = networkMonitorService.GetAvailableDevices();
             foreach (var device in devices)
@@ -144,16 +163,79 @@ namespace AppIntBlockerGUI.ViewModels
             }
 
             NoDevicesFound = !NetworkDevices.Any();
+            loggingService.LogInfo($"Network devices found: {NetworkDevices.Count}, NoDevicesFound: {NoDevicesFound}");
 
             if (!monitoringStarted && NetworkDevices.Any())
             {
-                SelectedNetworkDevice = NetworkDevices.First();
-                // Note: The OnSelectedNetworkDeviceChanged handler will trigger the initial monitoring.
+                // Try to select the default network device first
+                var defaultDevice = networkMonitorService.GetDefaultNetworkDevice();
+                string deviceToSelect;
+                
+                if (defaultDevice != null && NetworkDevices.Contains(defaultDevice))
+                {
+                    deviceToSelect = defaultDevice;
+                    loggingService.LogInfo($"Auto-selecting default network device: {deviceToSelect}");
+                }
+                else
+                {
+                    deviceToSelect = NetworkDevices.First();
+                    loggingService.LogInfo($"Auto-selecting first available device: {deviceToSelect}");
+                }
+                
+                // Directly set the property and trigger the monitoring async
+                // to avoid any race conditions with the UI binding.
+                SelectedNetworkDevice = deviceToSelect;
+                _ = ChangeDeviceAsync(deviceToSelect);
             }
         }
 
         public void OnNavigatedFrom()
         {
+            // Only stop the UI timer, not the background monitoring service.
+            graphTimer.Stop();
+        }
+        
+        partial void OnSelectedNetworkDeviceChanged(string? value)
+        {
+            loggingService.LogInfo($"OnSelectedNetworkDeviceChanged called with value: {value}, IsChangingDevice: {IsChangingDevice}");
+            
+            if (value != null && !IsChangingDevice)
+            {
+                loggingService.LogInfo($"Starting device change to: {value}");
+                _ = ChangeDeviceAsync(value);
+            }
+        }
+
+        private async Task ChangeDeviceAsync(string deviceName)
+        {
+            loggingService.LogInfo($"ChangeDeviceAsync started for device: {deviceName}");
+            IsChangingDevice = true;
+            try
+            {
+                loggingService.LogInfo($"Device selection changed. Monitoring '{deviceName}'.");
+                await networkMonitorService.StartMonitoringAsync(deviceName);
+                monitoringStarted = true;
+                loggingService.LogInfo("Monitoring started successfully, starting graph timer");
+                if (!graphTimer.IsEnabled)
+                {
+                    graphTimer.Start();
+                    loggingService.LogInfo("Graph timer started");
+                }
+            }
+            catch (Exception ex)
+            {
+                loggingService.LogError($"Error in ChangeDeviceAsync: {ex.Message}", ex);
+            }
+            finally
+            {
+                IsChangingDevice = false;
+                loggingService.LogInfo("ChangeDeviceAsync completed");
+            }
+        }
+        
+        public void Dispose()
+        {
+            // Stop everything on dispose.
             if (monitoringStarted)
             {
                 graphTimer.Stop();
@@ -161,43 +243,11 @@ namespace AppIntBlockerGUI.ViewModels
                 monitoringStarted = false;
             }
         }
-        
-        partial void OnSelectedNetworkDeviceChanged(string? value)
-        {
-            if (value != null && !IsChangingDevice)
-            {
-                _ = ChangeDeviceAsync(value);
-            }
-        }
-
-        private async Task ChangeDeviceAsync(string deviceName)
-        {
-            IsChangingDevice = true;
-            try
-            {
-                loggingService.LogInfo($"Device selection changed. Monitoring '{deviceName}'.");
-                await networkMonitorService.StartMonitoringAsync(deviceName);
-                monitoringStarted = true;
-                if (!graphTimer.IsEnabled)
-                {
-                    graphTimer.Start();
-                }
-            }
-            finally
-            {
-                IsChangingDevice = false;
-            }
-        }
-        
-        public void Dispose()
-        {
-            OnNavigatedFrom();
-        }
 
         private void GraphTimer_Tick(object? sender, EventArgs e)
         {
-            this.TotalUploadKbps = this.networkMonitorService.Usages.Sum(u => u.UploadKbps);
-            this.TotalDownloadKbps = this.networkMonitorService.Usages.Sum(u => u.DownloadKbps);
+            this.TotalUploadMbps = this.networkMonitorService.Usages.Sum(u => u.UploadKbps);
+            this.TotalDownloadMbps = this.networkMonitorService.Usages.Sum(u => u.DownloadKbps);
             this.TotalUploadedMb = this.networkMonitorService.Usages.Sum(u => u.TotalSentMB);
             this.TotalDownloadedMb = this.networkMonitorService.Usages.Sum(u => u.TotalReceivedMB);
 
@@ -207,8 +257,8 @@ namespace AppIntBlockerGUI.ViewModels
 
             if (this.IsGraphShowingTotal)
             {
-                upload = this.TotalUploadKbps;
-                download = this.TotalDownloadKbps;
+                upload = this.TotalUploadMbps;
+                download = this.TotalDownloadMbps;
             }
             else if (this.SelectedProcess != null)
             {
@@ -225,9 +275,11 @@ namespace AppIntBlockerGUI.ViewModels
                 this.downloadSeriesValues.RemoveAt(0);
             }
 
-            if (this.TotalDownloadKbps > AlertThresholdKbps || this.TotalUploadKbps > AlertThresholdKbps)
+            // Convert threshold to Mbps for comparison (AlertThresholdKbps was in old kbps)
+            const double AlertThresholdMbps = 5.0; // 5 Mbps
+            if (this.TotalDownloadMbps > AlertThresholdMbps || this.TotalUploadMbps > AlertThresholdMbps)
             {
-                this.loggingService.LogWarning($"Throughput exceeded {AlertThresholdKbps / 1000} Mbps");
+                this.loggingService.LogWarning($"Throughput exceeded {AlertThresholdMbps} Mbps");
             }
         }
 

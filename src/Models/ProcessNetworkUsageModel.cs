@@ -1,6 +1,7 @@
 namespace AppIntBlockerGUI.Models
 {
     using System;
+    using System.Threading;
     using CommunityToolkit.Mvvm.ComponentModel;
 
     /// <summary>
@@ -17,8 +18,26 @@ namespace AppIntBlockerGUI.Models
         [ObservableProperty]
         private string path = string.Empty;
 
-        public long TotalSentBytes;
-        public long TotalReceivedBytes;
+        private long _totalSentBytes;
+        private long _totalReceivedBytes;
+
+        public long TotalSentBytes => _totalSentBytes;
+        public long TotalReceivedBytes => _totalReceivedBytes;
+
+        public void AddSentBytes(long bytes)
+        {
+            Interlocked.Add(ref _totalSentBytes, bytes);
+            OnPropertyChanged(nameof(TotalSentBytes));
+            OnPropertyChanged(nameof(TotalSentMB));
+        }
+
+        public void AddReceivedBytes(long bytes)
+        {
+            Interlocked.Add(ref _totalReceivedBytes, bytes);
+            OnPropertyChanged(nameof(TotalReceivedBytes));
+            OnPropertyChanged(nameof(TotalReceivedMB));
+        }
+
         public long PreviousTotalSentBytes;
         public long PreviousTotalReceivedBytes;
         public DateTime PreviousSampleTime;
