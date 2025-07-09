@@ -12,21 +12,25 @@
              d:DesignHeight="600" d:DesignWidth="900">
 
     <UserControl.Resources>
-        <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter"/>
-        <Style x:Key="HeaderStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#eebb88"/>
-            <Setter Property="FontSize" Value="20"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-        </Style>
-        <Style TargetType="TextBlock" x:Key="StatLabelStyle">
-            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
-        </Style>
-        <Style TargetType="TextBlock" x:Key="StatValueStyle">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="16"/>
-        </Style>
+        <ResourceDictionary>
+            <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+            <Style x:Key="HeaderStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#eebb88"/>
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+            </Style>
+            <Style TargetType="TextBlock" x:Key="StatLabelStyle">
+                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
+                <Setter Property="FontSize" Value="12"/>
+            </Style>
+            <Style TargetType="TextBlock" x:Key="StatValueStyle">
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="16"/>
+            </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -45,21 +49,52 @@
             </Grid.ColumnDefinitions>
 
             <!-- Process List -->
-            <DataGrid Grid.Column="0" ItemsSource="{Binding Usages}"
-                      SelectedItem="{Binding SelectedProcess}"
-                      AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                      Background="#171310" Foreground="#f5f0eb" BorderThickness="0"
-                      RowBackground="#2a2623"
-                      AlternatingRowBackground="#2f2a27">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
-                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto"/>
-                    <DataGridTextColumn Header="Upload (kbit/s)" Binding="{Binding UploadKbps, StringFormat={}{0:F1}}" Width="*"/>
-                    <DataGridTextColumn Header="Download (kbit/s)" Binding="{Binding DownloadKbps, StringFormat={}{0:F1}}" Width="*"/>
-                    <DataGridTextColumn Header="Sent (MB)" Binding="{Binding TotalSentMB, StringFormat={}{0:F1}}" Width="*"/>
-                    <DataGridTextColumn Header="Received (MB)" Binding="{Binding TotalReceivedMB, StringFormat={}{0:F1}}" Width="*"/>
-                </DataGrid.Columns>
-            </DataGrid>
+            <Grid Grid.Column="0">
+                <DataGrid ItemsSource="{Binding Usages}"
+                          SelectedItem="{Binding SelectedProcess}"
+                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                          Background="#171310" Foreground="#f5f0eb" BorderThickness="0"
+                          RowBackground="#2a2623"
+                          AlternatingRowBackground="#2f2a27"
+                          Visibility="{Binding NoDevicesFound, Converter={StaticResource InvertedBooleanToVisibilityConverter}}">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="#171310"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
+                        <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="Auto"/>
+                        <DataGridTextColumn Header="Upload (kbit/s)" Binding="{Binding UploadKbps, StringFormat={}{0:F1}}" Width="*"/>
+                        <DataGridTextColumn Header="Download (kbit/s)" Binding="{Binding DownloadKbps, StringFormat={}{0:F1}}" Width="*"/>
+                        <DataGridTextColumn Header="Sent (MB)" Binding="{Binding TotalSentMB, StringFormat={}{0:F1}}" Width="*"/>
+                        <DataGridTextColumn Header="Received (MB)" Binding="{Binding TotalReceivedMB, StringFormat={}{0:F1}}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Border Background="#2a2623" CornerRadius="8" Padding="20"
+                        Visibility="{Binding NoDevicesFound, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="⚠️ Network Interface Not Found"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0">
+                            No active network interfaces could be found. This feature requires the Npcap packet capture library.
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0">
+                            Please install <Hyperlink NavigateUri="https://npcap.com/#download" RequestNavigate="Hyperlink_RequestNavigate">Npcap</Hyperlink> and ensure it's installed in "WinPcap API-compatible Mode".
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
             <!-- Right Panel: Chart, Stats, Actions -->
             <Grid Grid.Column="2">
