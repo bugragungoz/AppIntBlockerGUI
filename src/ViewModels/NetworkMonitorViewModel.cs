@@ -71,7 +71,7 @@ namespace AppIntBlockerGUI.ViewModels
                     Stroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
                     Fill = new LinearGradientPaint(SKColors.DodgerBlue.WithAlpha(90), SKColors.DodgerBlue.WithAlpha(10), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
                     GeometrySize = 0,
-                    LineSmoothness = 0.6
+                    LineSmoothness = 1
                 },
                 new LineSeries<ObservablePoint>
                 {
@@ -80,7 +80,7 @@ namespace AppIntBlockerGUI.ViewModels
                     Stroke = new SolidColorPaint(SKColors.OrangeRed, 2),
                     Fill = new LinearGradientPaint(SKColors.OrangeRed.WithAlpha(90), SKColors.OrangeRed.WithAlpha(10), new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
                     GeometrySize = 0,
-                    LineSmoothness = 0.6
+                    LineSmoothness = 1
                 }
             };
 
