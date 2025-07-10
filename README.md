@@ -1,245 +1,185 @@
 ⚠️ **Disclaimer:** This project is currently under active development and in a pre-release state. Features may be unstable or subject to change. Please use with caution.
 
-<div align="center">
+# AppIntBlockerGUI v1.2.0
 
-# 🛡️ AppIntBlockerGUI v1.2.0
-
-**Professional Windows Application Firewall Manager with Modern UI**
+**Professional Windows Application Firewall Manager**
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/bugragungoz/AppIntBlockerGUI/actions)
-[![Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)](https://github.com/bugragungoz/AppIntBlockerGUI/releases)
-[![Security](https://img.shields.io/badge/Security-Hardened-green.svg)](#security)
 
 ![Block Application View](docs/assets/images/blockApplication.png)
 
-[📦 Download Latest Release](https://github.com/bugragungoz/AppIntBlockerGUI/releases) | [📚 Documentation](docs/) | [🐛 Report Bug](https://github.com/bugragungoz/AppIntBlockerGUI/issues) | [💡 Request Feature](https://github.com/bugragungoz/AppIntBlockerGUI/issues)
+[Download Latest Release](https://github.com/bugragungoz/AppIntBlockerGUI/releases) | [Documentation](docs/) | [Report Bug](https://github.com/bugragungoz/AppIntBlockerGUI/issues) | [Request Feature](https://github.com/bugragungoz/AppIntBlockerGUI/issues)
 
-</div>
+## Overview
 
-## 🌟 **Key Features**
+AppIntBlockerGUI is a Windows application that provides an intuitive interface for managing Windows Firewall rules. Built with WPF and following MVVM architectural patterns, it offers firewall management capabilities with a modern, user-friendly interface.
 
-### 🔥 **Core Functionality**
-- **🚫 Application Blocking**: Effortlessly block applications from network access
-- **⚙️ Advanced Rule Management**: Create, edit, delete, and organize firewall rules
-- **📊 Real-time Network Monitor**: Live dashboard with intelligent process analysis
-- **🔄 One-Click Blocking**: Instantly block/unblock processes from network monitor
-- **💾 Restore Points**: Create and restore firewall configuration snapshots
-- **🎯 Windows Firewall Integration**: Direct API integration for reliable rule management
+## Features
 
-### 🧠 **Enhanced Network Intelligence**
-- **🔍 Smart Service Detection**: Identifies 100+ network services (HTTP, HTTPS, SSH, FTP, etc.)
-- **📈 Traffic Analytics**: Real-time bandwidth monitoring with 60-second live graphs
-- **🔄 Connection Intelligence**: Advanced TCP/UDP/ICMP classification
-- **⚡ Performance Counters**: Accurate per-process byte tracking
-- **🛡️ Security Insights**: Identifies security-sensitive and system processes
+### Core Functionality
+- **Application Blocking**: Block applications from network access
+- **Rule Management**: Create, edit, delete, and organize firewall rules
+- **Network Monitor**: Real-time dashboard with per-process bandwidth monitoring
+- **One-Click Blocking**: Block/unblock processes directly from network monitor
+- **Restore Points**: Create and restore firewall configuration snapshots
+- **Windows Firewall Integration**: Direct integration with Windows Firewall API
 
-### 🎨 **Modern User Experience**
-- **🌙 Beautiful Dark Theme**: Professional, modern interface design
-- **📱 Responsive UI**: Smooth animations and real-time updates
-- **👨‍💼 Administrator Management**: Automatic privilege checking and elevation
-- **🔄 Cancellation Support**: Cancel long-running operations
-- **📊 Live Charts**: Interactive bandwidth graphs with LiveCharts2
+### Network Intelligence
+- **Service Detection**: Identifies common network services (HTTP, HTTPS, SSH, FTP, etc.)
+- **Traffic Analytics**: Real-time bandwidth monitoring with live graphs
+- **Connection Analysis**: TCP/UDP/ICMP connection classification
+- **Process Monitoring**: Per-process network usage tracking
 
-## 🖼️ **Additional Views**
+### Technical Architecture
+- **MVVM Pattern**: Clean separation of concerns
+- **Dependency Injection**: Microsoft.Extensions.DependencyInjection
+- **Async Operations**: Non-blocking UI with cancellation support
+- **Comprehensive Logging**: Serilog-based logging system
+- **Unit Testing**: MSTest framework with Moq
 
-<div align="center">
+## Additional Views
 
 | Manage Rules | Restore Points | Windows Firewall | Settings |
 | :---: | :---: | :---: | :---: |
 | ![Manage Rules View](docs/assets/images/manageRules.png) | ![Restore Points View](docs/assets/images/restorePoints.png) | ![Windows Firewall View](docs/assets/images/windowsFirewall.png) | ![Settings View 1](docs/assets/images/settings1.png) |
 
-</div>
+## Quick Start
 
-## 🚀 **Quick Start**
+### Prerequisites
 
-### 📋 **Prerequisites**
-
-| Requirement | Version | Download |
-|-------------|---------|----------|
-| Windows | 10/11 | - |
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Windows | 10/11 | Administrator privileges required |
 | .NET Desktop Runtime | 8.0+ | [Download](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Npcap Driver | Latest | [Download](https://npcap.com/) |
-| Administrator Rights | Required | Automatic elevation |
+| Npcap Driver | Latest | [Download](https://npcap.com/) - Install in WinPcap mode |
 
-### 📦 **Installation**
+### Installation
 
-1. **Download**: Get the latest release from [GitHub Releases](https://github.com/bugragungoz/AppIntBlockerGUI/releases)
-2. **Install**: Run the `.msi` installer and follow the setup wizard
-3. **Configure**: Install Npcap in **WinPcap API-Compatible Mode** for network monitoring
-4. **Launch**: The application will request administrator privileges automatically
+1. **Download** the latest release from [GitHub Releases](https://github.com/bugragungoz/AppIntBlockerGUI/releases/latest)
+2. **Install** Npcap in WinPcap API-Compatible Mode for network monitoring
+3. **Run** the installer as administrator
+4. **Launch** the application (will request administrator privileges automatically)
 
-### 💻 **Building from Source**
+### Building from Source
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/bugragungoz/AppIntBlockerGUI.git
 cd AppIntBlockerGUI
 
 # Restore dependencies
 dotnet restore
 
-# Build the project
+# Build
 dotnet build --configuration Release
 
-# Run the application
+# Run
 cd src && dotnet run
 ```
 
-## 🏗️ **Architecture & Technology**
+## Architecture & Technology
 
-### 📐 **Modern Architecture**
-- **🎯 MVVM Pattern**: Clean separation with ViewModels, Services, and Models
-- **💉 Dependency Injection**: Microsoft.Extensions.DependencyInjection
-- **🔄 Async Programming**: Full async/await implementation with cancellation support
-- **🛠️ Service-Based Design**: Modular, testable, and maintainable codebase
+### Framework & Libraries
+- **.NET 8.0 WPF** - Desktop application framework
+- **MahApps.Metro** - Modern UI components
+- **LiveChartsCore.SkiaSharp** - Real-time data visualization
+- **Serilog** - Structured logging
+- **MSTest + Moq** - Unit testing framework
+- **SharpPcap + PacketDotNet** - Network packet capture
 
-### 🛠️ **Tech Stack**
+### Key Services
+- `IFirewallService` - Windows Firewall API integration
+- `INetworkMonitorService` - Real-time network monitoring
+- `ILoggingService` - Application logging
+- `IDialogService` - Modal dialog management
+- `INavigationService` - MVVM navigation
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Framework** | .NET 8.0 WPF | Cross-platform desktop framework |
-| **UI Library** | MahApps.Metro | Modern, professional UI components |
-| **Charts** | LiveChartsCore.SkiaSharp | Real-time data visualization |
-| **Icons** | MahApps.Metro.IconPacks | Comprehensive icon sets |
-| **Logging** | Serilog | Structured, high-performance logging |
-| **Testing** | MSTest + Moq | Unit testing with mocking framework |
-| **Network** | SharpPcap + PacketDotNet | Network packet capture and analysis |
-
-### 🎯 **Key Services**
-
-```mermaid
-graph TD
-    A[App.xaml] --> B[ServiceContainer]
-    B --> C[IFirewallService]
-    B --> D[INetworkMonitorService]
-    B --> E[ILoggingService]
-    B --> F[IDialogService]
-    C --> G[PowerShell Integration]
-    C --> H[Netsh Fallback]
-    D --> I[Performance Counters]
-    D --> J[Packet Capture]
-```
-
-## 📊 **Project Structure**
+## Project Structure
 
 ```
 AppIntBlockerGUI/
-├── 📁 src/
-│   ├── 📁 ViewModels/           # MVVM ViewModels
-│   ├── 📁 Views/               # WPF Views and UserControls
-│   ├── 📁 Services/            # Business logic and services
-│   ├── 📁 Models/              # Data models and DTOs
-│   ├── 📁 Converters/          # Value converters for data binding
-│   ├── 📁 Core/                # Core interfaces and utilities
-│   └── 📁 Resources/           # Themes, styles, and assets
-├── 📁 Tests/                   # Unit tests and test utilities
-├── 📁 docs/                    # Comprehensive documentation
-│   ├── 📄 api.md              # API documentation
-│   ├── 📄 security.md         # Security practices and policies
-│   ├── 📄 installation.md     # Detailed installation guide
-│   └── 📄 roadmap.md          # Future development plans
-├── 📁 .github/workflows/       # CI/CD pipeline configurations
-├── 📄 CHANGELOG.md            # Version history and changes
-├── 📄 LICENSE                 # MIT license
-└── 📄 README.md               # This file
+├── src/
+│   ├── ViewModels/           # MVVM ViewModels
+│   ├── Views/               # WPF Views and UserControls
+│   ├── Services/            # Business logic and services
+│   ├── Models/              # Data models
+│   ├── Converters/          # Value converters
+│   ├── Core/                # Core interfaces and utilities
+│   └── Resources/           # Themes, styles, and assets
+├── Tests/                   # Unit tests
+├── docs/                    # Documentation
+├── .github/workflows/       # CI/CD pipeline
+├── CHANGELOG.md            # Version history
+├── LICENSE                 # MIT license
+└── README.md               # This file
 ```
 
-## 🔒 **Security**
+## Security
 
-**AppIntBlockerGUI** implements multiple layers of security to protect your system:
+AppIntBlockerGUI implements security best practices:
 
-### 🛡️ **Security Features**
-- **✅ Input Validation**: Comprehensive sanitization of all user inputs
-- **✅ Command Injection Protection**: Parameterized commands and argument escaping
-- **✅ Path Traversal Prevention**: Robust path validation and normalization
-- **✅ Privilege Management**: Secure administrator elevation handling
-- **✅ System Protection**: Critical system directory and file protection
+- **Input Validation**: Comprehensive sanitization of user inputs
+- **Command Injection Protection**: Parameterized commands and argument escaping
+- **Path Traversal Prevention**: Path validation and normalization
+- **Privilege Management**: Secure administrator elevation handling
+- **System Protection**: Critical system directory and file protection
 
-### 🔍 **Security Practices**
-- **Regular Security Audits**: Automated and manual code reviews
-- **Dependency Scanning**: Regular updates of all dependencies
-- **Secure Coding Standards**: Following OWASP security guidelines
-- **Encrypted Settings**: User settings encrypted with DPAPI
+For detailed security information, see [Security Policy](docs/security.md)
 
-> 📖 **For detailed security information, see our [Security Policy](docs/security.md)**
+## Testing & Quality
 
-## 🧪 **Testing & Quality**
-
-### ✅ **Testing Strategy**
 - **Unit Tests**: Comprehensive service layer testing with MSTest
 - **Mocking**: Isolated testing with Moq framework
-- **CI/CD Integration**: Automated testing on every commit
-- **Performance Testing**: Memory and CPU usage optimization
+- **CI/CD**: Automated testing on every commit
+- **Code Quality**: Static analysis and security scanning
 
-### 📊 **Quality Metrics**
-- **Code Coverage**: Targeting >80% coverage
-- **Static Analysis**: Automated code quality checks
-- **Performance**: Optimized for minimal resource usage
-- **Reliability**: Robust error handling and recovery
+## Recent Updates
 
-## 📈 **Recent Updates**
+### v1.2.0 - Enhanced Network Monitoring (January 2025)
+- Real-time process bandwidth monitoring
+- Interactive 60-second bandwidth graphs
+- One-click blocking from network monitor
+- Performance counters integration
+- Enhanced UI responsiveness
 
-### 🆕 **v1.2.0 - Enhanced Network Monitoring**
-- **📊 Real-time Dashboard**: Live process bandwidth monitoring
-- **📈 Interactive Charts**: 60-second bandwidth graphs
-- **⚡ One-click Blocking**: Instant firewall rule creation
-- **🔄 Performance Optimization**: Enhanced monitoring efficiency
+### v1.1.0 - Reliability & Testing (July 2024)
+- Cancellation support for long-running operations
+- Comprehensive unit test suite
+- CI/CD pipeline implementation
+- Architectural improvements for testability
 
-### 🔧 **v1.1.0 - Reliability & Testing**
-- **❌ Cancellation Support**: User-controllable long operations
-- **🧪 Unit Test Suite**: Comprehensive testing framework
-- **⚙️ CI/CD Pipeline**: Automated build and test processes
-- **🏗️ Architecture Refactoring**: Improved testability and maintainability
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
-> 📋 **[View Full Changelog](CHANGELOG.md)**
+## Contributing
 
-## 🤝 **Contributing**
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+- Development setup
+- Code style guidelines
+- Testing requirements
+- Pull request process
 
-We welcome contributions from the community! Here's how you can help:
+## License
 
-### 🚀 **Getting Started**
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/AmazingFeature`
-3. **Commit** your changes: `git commit -m 'Add AmazingFeature'`
-4. **Push** to the branch: `git push origin feature/AmazingFeature`
-5. **Open** a Pull Request
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### 📝 **Contribution Guidelines**
-- Follow existing code style and conventions
-- Add unit tests for new functionality
-- Update documentation as needed
-- Ensure all tests pass before submitting
+## Acknowledgments
 
-## 📜 **License**
+### Development Partnership
+This project was developed with assistance from AI models:
+- **Claude 4 Sonnet**: Architecture design and security implementation
+- **Gemini 2.5 Pro**: UI/UX optimization and documentation
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+### Open Source Inspiration
+Network monitoring capabilities inspired by [Sniffnet](https://github.com/GyulyVGC/sniffnet) by Giuliano Bellini.
 
-## 🙏 **Acknowledgments**
-
-### 🤖 **AI Development Partnership**
-This project was developed with the assistance of advanced AI models:
-- **Claude 4 Sonnet**: Architecture design, security implementation, and best practices
-- **Gemini 2.5 Pro**: UI/UX optimization, documentation, and testing strategies
-
-### 🌟 **Open Source Inspiration**
-Special thanks to the [**Sniffnet**](https://github.com/GyulyVGC/sniffnet) project by Giuliano Bellini for inspiring our network monitoring capabilities and providing excellent algorithms for service detection and traffic classification.
-
-### 🛠️ **Technology Partners**
-- [**MahApps.Metro**](https://mahapps.com/) - Beautiful, modern UI framework
-- [**LiveCharts**](https://livecharts.dev/) - Powerful data visualization
-- [**Serilog**](https://serilog.net/) - Structured logging platform
+### Technology Stack
+- [MahApps.Metro](https://mahapps.com/) - Modern UI framework
+- [LiveCharts](https://livecharts.dev/) - Data visualization
+- [Serilog](https://serilog.net/) - Structured logging
 
 ---
 
-<div align="center">
-
-**⭐ If you find this project useful, please give it a star! ⭐**
-
 [Report Bug](https://github.com/bugragungoz/AppIntBlockerGUI/issues) • [Request Feature](https://github.com/bugragungoz/AppIntBlockerGUI/issues) • [Join Discussion](https://github.com/bugragungoz/AppIntBlockerGUI/discussions)
-
-**Made with ❤️ by the AppIntBlocker community**
-
-</div>
