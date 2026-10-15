@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        run: dotnet build AppIntBlockerGUI.sln -c Release
+
+      # Includes firewall.ps1 run in Windows PowerShell 5.1 and PowerShell 7 against stand-in
+      # cmdlets, so the runner's firewall is never touched.
+      - name: Test
+        run: dotnet test AppIntBlockerGUI.sln -c Release --no-build
+
+      - name: Publish
+        run: dotnet publish src/AppIntBlockerGUI/AppIntBlockerGUI.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AppIntBlockerGUI-win-x64
+          path: publish
+
+  # Publishing a release on GitHub attaches the build to it as a zip.
+  release:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AppIntBlockerGUI-win-x64
+          path: publish
+
+      - name: Attach the zip to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $zip = "AppIntBlockerGUI-$env:TAG-win-x64.zip"
+          Compress-Archive -Path publish/* -DestinationPath $zip
+          gh release upload $env:TAG $zip --repo $env:GITHUB_REPOSITORY
