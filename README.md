@@ -1,5 +1,8 @@
 # AppIntBlockerGUI
 
+> **Not fully tested yet.** Version 2.0.0 builds and its tests pass on Windows, but it has not yet
+> been run against a real Windows Firewall. Try it in Windows Sandbox or a virtual machine first.
+
 A small Windows app that blocks an application's internet access. Choose the application's folder,
 check the `.exe` files found in it, and choose Block: each file gets a Windows Firewall rule that
 blocks it, inbound and outbound. It is the window version of

@@ -2,6 +2,9 @@
 
 ## 2.0.0 - 2026-10-15
 
+> **Not fully tested yet.** This version builds and its tests pass on Windows, but it has not yet
+> been run against a real Windows Firewall. Try it in Windows Sandbox or a virtual machine first.
+
 A rebuild around one job: the AppIntBlocker PowerShell script, with a window.
 
 ### Changed
