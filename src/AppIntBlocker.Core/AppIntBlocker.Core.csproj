@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything that is not UI: rule names, file scanning, input checks and the firewall
+       calls. It targets plain net8.0 so its tests run on any OS. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="firewall.ps1" LogicalName="AppIntBlocker.Core.firewall.ps1" />
+  </ItemGroup>
+
+</Project>

@@ -1,24 +1,43 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.5.2.0
+VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppIntBlockerGUI", "src\AppIntBlockerGUI.csproj", "{EAF84D0C-64E5-6F06-E115-79848CE21CF4}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C22C85DE-86BA-48FA-A33B-12E1064D465F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppIntBlocker.Core", "src\AppIntBlocker.Core\AppIntBlocker.Core.csproj", "{F3A082C7-B328-4339-AB55-6DC82D219109}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppIntBlockerGUI", "src\AppIntBlockerGUI\AppIntBlockerGUI.csproj", "{F7B58F04-EF32-4D22-9B59-B3E7FE207408}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{51C125A4-FE79-4426-84D4-B4E3F42ED853}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppIntBlocker.Tests", "Tests\AppIntBlocker.Tests\AppIntBlocker.Tests.csproj", "{E3A34DE2-3B6C-4281-8EB0-504E40254D67}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EAF84D0C-64E5-6F06-E115-79848CE21CF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EAF84D0C-64E5-6F06-E115-79848CE21CF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EAF84D0C-64E5-6F06-E115-79848CE21CF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EAF84D0C-64E5-6F06-E115-79848CE21CF4}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {7F989917-22AC-4B39-8885-9A840B205E2B}
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3A082C7-B328-4339-AB55-6DC82D219109}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3A082C7-B328-4339-AB55-6DC82D219109}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3A082C7-B328-4339-AB55-6DC82D219109}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A082C7-B328-4339-AB55-6DC82D219109}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7B58F04-EF32-4D22-9B59-B3E7FE207408}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7B58F04-EF32-4D22-9B59-B3E7FE207408}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7B58F04-EF32-4D22-9B59-B3E7FE207408}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7B58F04-EF32-4D22-9B59-B3E7FE207408}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3A34DE2-3B6C-4281-8EB0-504E40254D67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3A34DE2-3B6C-4281-8EB0-504E40254D67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3A34DE2-3B6C-4281-8EB0-504E40254D67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3A34DE2-3B6C-4281-8EB0-504E40254D67}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F3A082C7-B328-4339-AB55-6DC82D219109} = {C22C85DE-86BA-48FA-A33B-12E1064D465F}
+		{F7B58F04-EF32-4D22-9B59-B3E7FE207408} = {C22C85DE-86BA-48FA-A33B-12E1064D465F}
+		{E3A34DE2-3B6C-4281-8EB0-504E40254D67} = {51C125A4-FE79-4426-84D4-B4E3F42ED853}
 	EndGlobalSection
 EndGlobal
