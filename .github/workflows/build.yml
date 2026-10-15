@@ -3,9 +3,8 @@ name: Build
 on:
   push:
     branches: [master]
+    tags: ['v*']
   pull_request:
-  release:
-    types: [published]
 
 permissions:
   contents: read
@@ -36,25 +35,37 @@ jobs:
           name: AppIntBlockerGUI-win-x64
           path: publish
 
-  # Publishing a release on GitHub attaches the build to it as a zip.
+  # Pushing a version tag (v2.0.0) publishes a release with the build as a zip and the version's
+  # CHANGELOG section as its notes. A release already made on GitHub for the tag gets the zip added.
   release:
-    if: github.event_name == 'release'
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: windows-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: AppIntBlockerGUI-win-x64
           path: publish
 
-      - name: Attach the zip to the release
+      - name: Publish the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.ref_name }}
         run: |
           $zip = "AppIntBlockerGUI-$env:TAG-win-x64.zip"
           Compress-Archive -Path publish/* -DestinationPath $zip
-          gh release upload $env:TAG $zip --repo $env:GITHUB_REPOSITORY
+          $version = $env:TAG.TrimStart('v')
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $notes = [regex]::Match($changelog, "(?ms)^## $([regex]::Escape($version))\b[^\n]*\n(.*?)(?=^## |\z)").Groups[1].Value.Trim()
+          Set-Content -Path notes.md -Value $notes -Encoding utf8
+          gh release view $env:TAG --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+              gh release upload $env:TAG $zip --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+              gh release create $env:TAG $zip --title "AppIntBlockerGUI $env:TAG" --notes-file notes.md --repo $env:GITHUB_REPOSITORY
+          }
