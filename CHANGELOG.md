@@ -1,151 +1,39 @@
-# 📋 Changelog
+# Changelog
 
-All notable changes to **AppIntBlockerGUI** will be documented in this file.
+## 2.0.0 - 2026-10-15
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+A rebuild around one job: the AppIntBlocker PowerShell script, with a window.
 
-## [Unreleased]
+### Changed
 
-### 🔄 **Planned**
-- Enhanced security analysis dashboard
-- Automated vulnerability scanning
-- Extended CI/CD pipeline with security checks
-- Performance optimization metrics
-- Multi-language support
+- Two pages: **Block** (choose a folder, check its `.exe` files, block them) and **Blocked apps**
+  (see, remove and back up the rules).
+- Only `.exe` files get rules. A rule for a DLL never matches any traffic, because Windows Firewall
+  matches the program of the process that opens a connection.
+- Rule names match AppIntBlocker.ps1, so the app and the script see and remove each other's rules.
+- Firewall changes go through one PowerShell script run by Windows PowerShell, with no temporary
+  files and no user text on a command line.
+- New look on the Bugra design system, with a dark and a light theme that follow the Windows app
+  setting.
 
-### 🔒 **Security Improvements**
-- Comprehensive input validation audit
-- Enhanced logging sanitization
-- Privilege escalation protection
-- Rate limiting for network operations
+### Added
 
----
+- A backup of the firewall before blocking (on by default) and on request; restore it with
+  `netsh advfirewall import`.
+- A check that refuses a whole drive, the Windows folder and folders such as Program Files itself.
+- A confirmation before rules are replaced or removed.
+- Tests, including runs of the firewall script in Windows PowerShell 5.1 and PowerShell 7 against
+  stand-in cmdlets.
 
-## [1.2.0] - 2024-07-08
+### Removed
 
-### 🆕 **Added**
-- **📊 Network Monitor Dashboard**: Real-time view displaying upload/download rates per running process
-- **📈 Live Bandwidth Graphs**: Interactive 60-second bandwidth visualization powered by LiveCharts2
-- **⚡ Internet Block/Unblock**: One-click toggle to create or remove firewall rules directly from the dashboard
-- **📊 Performance Counters**: Windows `PerformanceCounter` API integration for accurate per-process byte tracking
-- **📈 Aggregate Statistics**: Header displays total current throughput and cumulative data transferred
-- **🚨 Alert Thresholds**: Configurable throughput warnings (default: 5 Mbps)
-- **🔍 Process Analysis**: Enhanced process categorization and security identification
+- The network monitor, restore points, Windows Firewall overview and settings pages, the ASCII-art
+  terminal, and the Npcap requirement.
+- 17 of 18 NuGet packages; CommunityToolkit.Mvvm is the one left.
+- The bundled copy of Sniffnet and the old documentation pages.
 
-### 🔄 **Changed**
-- **📊 Charting Library Upgrade**: Migrated from `ScottPlot` to `LiveChartsCore.SkiaSharpView.WPF` for superior performance and animations
-- **🏗️ Service Registration**: Added `INetworkMonitorService` and `NetworkMonitorViewModel` to DI container
-- **🎨 UI Navigation**: Enhanced sidebar with "Network Monitor" navigation option
-- **⚡ Performance**: Optimized real-time data processing and chart rendering
+## Earlier versions
 
-### 🐛 **Fixed**
-- **📊 Data Binding**: Resolved formatting issues with `TotalSentMB` and `TotalReceivedMB` display
-- **🔄 Memory Management**: Improved garbage collection for real-time monitoring
-- **🎯 Chart Performance**: Reduced CPU usage during continuous data updates
-
-### 🔒 **Security**
-- **✅ Process Validation**: Enhanced process path validation and sanitization
-- **🛡️ Privilege Checks**: Improved administrator privilege verification
-- **🔐 Data Protection**: Secured network monitoring data collection
-
----
-
-## [1.1.0] - 2025-07-04
-
-### 🆕 **Added**
-- **❌ Cancellation Support**: User-controllable cancellation for long-running operations (firewall rule refresh, etc.)
-- **🧪 Comprehensive Unit Test Suite**: Complete testing framework for `FirewallService` using MSTest and Moq
-- **⚙️ CI/CD Pipeline**: GitHub Actions workflow for automated building and testing on every push/PR
-- **📊 Dynamic Status Indicators**: Real-time status text updates (e.g., "Refreshing rules...")
-- **🔄 Progress Tracking**: Enhanced user feedback during background operations
-
-### 🔄 **Changed**
-- **🏗️ Architectural Refactoring**: `FirewallService` now depends on `IPowerShellWrapper` interface for improved testability
-- **🎯 Dependency Decoupling**: Removed direct dependency on `System.Management.Automation.PowerShell`
-- **🎨 UI Responsiveness**: Improved loading indicators in "Manage Rules" view
-- **📈 Error Handling**: Enhanced exception management and user feedback
-
-### 🐛 **Fixed**
-- **⏱️ Long-running Tasks**: Improved UI feedback during extended background operations
-- **🔄 Cancellation Handling**: Proper cleanup and state management for cancelled operations
-- **📊 Status Updates**: More accurate and timely status message updates
-
-### 🔒 **Security**
-- **✅ Input Validation**: Enhanced parameter validation in service methods
-- **🛡️ Error Message Sanitization**: Improved error handling to prevent information disclosure
-- **🔐 Interface Abstraction**: Better security through abstracted dependencies
-
----
-
-## [1.0.0] - 2025-01-07
-
-### 🎉 **Initial Release - Complete Architecture Implementation**
-
-### 🆕 **Added**
-- **🏗️ Modern MVVM Architecture**: Complete implementation with dependency injection
-- **🎨 Professional UI/UX**: Dark, modern theme with polished user experience
-- **🔧 Service-based Architecture**: Clean interfaces and proper separation of concerns
-- **📊 Real-time Status Dashboard**: Live uptime tracking and system monitoring
-- **🚫 Application Blocking**: Core functionality to block applications from network access
-- **⚙️ Rule Management**: Comprehensive firewall rule creation, editing, and deletion
-- **💾 Restore Points**: System state backup and restoration capabilities
-- **🎛️ Settings Management**: Configurable application preferences and options
-
-### 🔒 **Security Features**
-- **✅ Administrator Privilege Management**: Automatic elevation and verification
-- **🛡️ Input Validation**: Comprehensive user input sanitization
-- **🔐 Path Security**: Protection against path traversal attacks
-- **🚨 System Protection**: Critical system directory access prevention
-
-### 🛠️ **Technical Implementation**
-- **⚡ Async/Await Patterns**: Full asynchronous implementation throughout
-- **📊 Dependency Injection**: Microsoft.Extensions.DependencyInjection integration
-- **📝 Comprehensive Logging**: Serilog-based structured logging system
-- **🎯 Error Handling**: Robust exception management and recovery
-- **🔄 Performance Optimization**: Efficient resource usage and memory management
-
----
-
-## 🛡️ **Security Changelog**
-
-### **Vulnerability Fixes Applied**
-
-#### **🔴 Critical Fixes**
-- **Command Injection Protection**: Implemented parameterized command execution
-- **Path Traversal Prevention**: Added comprehensive path validation and normalization
-- **Input Sanitization**: Enhanced validation for all user inputs
-- **Privilege Escalation Protection**: Secured administrator elevation handling
-
-#### **🟠 High Priority Fixes**
-- **Error Message Sanitization**: Prevented sensitive information disclosure
-- **Memory Leak Prevention**: Proper resource disposal and cleanup
-- **Thread Safety**: Secured multi-threaded operations
-- **Dependency Injection Security**: Secured service instantiation and lifecycle
-
-#### **🟡 Medium Priority Fixes**
-- **Settings Encryption**: DPAPI encryption for user settings
-- **Log Security**: Sanitized logging to prevent information leaks
-- **UI Security**: Prevented UI-based attack vectors
-- **File System Security**: Enhanced file operation security
-
----
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
-- 🔧 Development setup
-- 📝 Code style guidelines
-- 🧪 Testing requirements
-- 📋 Pull request process
-
-## 📞 **Support**
-
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/bugragungoz/AppIntBlockerGUI/issues)
-- 💡 **Feature Requests**: [GitHub Issues](https://github.com/bugragungoz/AppIntBlockerGUI/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/bugragungoz/AppIntBlockerGUI/discussions)
-- 📧 **Security Issues**: Please see our [Security Policy](SECURITY.md)
-
----
-
-**📝 For detailed technical changes, see individual commit messages and pull requests.** 
+- 1.2.0: network monitor with per-process bandwidth graphs and blocking from the monitor.
+- 1.1.0: cancellation of long operations, unit tests for the firewall service, a CI pipeline.
+- 1.0.0: first version, with application blocking, rule management, restore points and settings.
